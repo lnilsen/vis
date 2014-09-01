@@ -5,7 +5,7 @@
  * A dynamic, browser-based visualization library.
  *
  * @version 3.2.0
- * @date    2014-08-14
+ * @date    2014-08-26
  *
  * @license
  * Copyright (C) 2011-2014 Almende B.V, http://almende.com
@@ -109,8 +109,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
     components: {
       items: {
-        Item: __webpack_require__(29),
-        ItemBox: __webpack_require__(28),
+        Item: __webpack_require__(28),
+        ItemBox: __webpack_require__(29),
         ItemPoint: __webpack_require__(30),
         ItemRange: __webpack_require__(31)
       },
@@ -6210,7 +6210,7 @@ return /******/ (function(modules) { // webpackBootstrap
   Timeline.prototype.setOptions = function (options) {
     if (options) {
       // copy the known options
-      var fields = ['width', 'height', 'minHeight', 'maxHeight', 'autoResize', 'start', 'end', 'orientation'];
+      var fields = ['width', 'height', 'minHeight', 'maxHeight', 'autoResize', 'start', 'end', 'orientation', 'horizontalOrientation'];
       util.selectiveExtend(fields, this.options, options);
 
       // enable/disable autoResize
@@ -6957,7 +6957,7 @@ return /******/ (function(modules) { // webpackBootstrap
   Range.prototype.setOptions = function (options) {
     if (options) {
       // copy the options that we know
-      var fields = ['direction', 'min', 'max', 'zoomMin', 'zoomMax', 'moveable', 'zoomable'];
+      var fields = ['direction', 'min', 'max', 'zoomMin', 'zoomMax', 'moveable', 'zoomable', 'horizontalOrientation'];
       util.selectiveExtend(fields, this.options, options);
 
       if ('start' in options || 'end' in options) {
@@ -7186,8 +7186,13 @@ return /******/ (function(modules) { // webpackBootstrap
     if (!this.props.touch.allowDragging) return;
     var delta = (direction == 'horizontal') ? event.gesture.deltaX : event.gesture.deltaY,
         interval = (this.props.touch.end - this.props.touch.start),
-        width = (direction == 'horizontal') ? this.body.domProps.center.width : this.body.domProps.center.height,
-        diffRange = -delta / width * interval;
+        width = (direction == 'horizontal') ? this.body.domProps.center.width : this.body.domProps.center.height;
+    if (this.options.horizontalOrientation == 'rtl') {
+      diffRange = delta / width * interval;
+    }
+    else {
+      diffRange = -delta / width * interval;
+    }
     this._applyRange(this.props.touch.start + diffRange, this.props.touch.end + diffRange);
     this.body.emitter.emit('rangechange', {
       start: new Date(this.start),
@@ -9469,7 +9474,7 @@ return /******/ (function(modules) { // webpackBootstrap
   var DataView = __webpack_require__(4);
   var Component = __webpack_require__(18);
   var Group = __webpack_require__(23);
-  var ItemBox = __webpack_require__(28);
+  var ItemBox = __webpack_require__(29);
   var ItemPoint = __webpack_require__(30);
   var ItemRange = __webpack_require__(31);
 
@@ -9723,7 +9728,7 @@ return /******/ (function(modules) { // webpackBootstrap
   ItemSet.prototype.setOptions = function(options) {
     if (options) {
       // copy all options that we know
-      var fields = ['type', 'align', 'orientation', 'padding', 'stack', 'selectable', 'groupOrder'];
+      var fields = ['type', 'align', 'orientation', 'horizontalOrientation', 'padding', 'stack', 'selectable', 'groupOrder'];
       util.selectiveExtend(fields, this.options, options);
 
       if ('margin' in options) {
@@ -12164,9 +12169,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
     this.defaultOptions = {
       orientation: 'bottom',  // supported: 'top', 'bottom'
-      // TODO: implement timeaxis orientations 'left' and 'right'
+      horizontalOrientation: 'ltr',  // supported: 'rtl', 'ltr'
       showMinorLabels: true,
-      showMajorLabels: true
+      showMajorLabels: true,
+      locale: 'en-gb'
     };
     this.options = util.extend({}, this.defaultOptions);
 
@@ -12185,13 +12191,14 @@ return /******/ (function(modules) { // webpackBootstrap
    * Parameters will be merged in current options.
    * @param {Object} options  Available options:
    *                          {string} [orientation]
+   *                          {string} [horizontalOrientation]
    *                          {boolean} [showMinorLabels]
    *                          {boolean} [showMajorLabels]
    */
   TimeAxis.prototype.setOptions = function(options) {
     if (options) {
       // copy all options that we know
-      util.selectiveExtend(['orientation', 'showMinorLabels', 'showMajorLabels'], this.options, options);
+      util.selectiveExtend(['orientation', 'horizontalOrientation', 'showMinorLabels', 'showMajorLabels'], this.options, options);
     }
   };
 
@@ -12288,6 +12295,7 @@ return /******/ (function(modules) { // webpackBootstrap
    */
   TimeAxis.prototype._repaintLabels = function () {
     var orientation = this.options.orientation;
+    var horizontalOrientation = this.options.horizontalOrientation;
 
     // calculate range and step (step such that we have space for 7 characters per label)
     var start = util.convert(this.body.range.start, 'Number'),
@@ -12332,10 +12340,10 @@ return /******/ (function(modules) { // webpackBootstrap
           }
           this._repaintMajorText(x, step.getLabelMajor(), orientation);
         }
-        this._repaintMajorLine(x, orientation);
+        this._repaintMajorLine(x, orientation, horizontalOrientation);
       }
       else {
-        this._repaintMinorLine(x, orientation);
+        this._repaintMinorLine(x, orientation, horizontalOrientation);
       }
 
       step.next();
@@ -12387,7 +12395,12 @@ return /******/ (function(modules) { // webpackBootstrap
     label.childNodes[0].nodeValue = text;
 
     label.style.top = (orientation == 'top') ? (this.props.majorLabelHeight + 'px') : '0';
-    label.style.left = x + 'px';
+    if (this.options.horizontalOrientation == 'rtl') {
+      label.style.right = x + 'px';
+    }
+    else {
+      label.style.left = x + 'px';
+    }
     //label.title = title;  // TODO: this is a heavy operation
   };
 
@@ -12416,16 +12429,22 @@ return /******/ (function(modules) { // webpackBootstrap
     //label.title = title; // TODO: this is a heavy operation
 
     label.style.top = (orientation == 'top') ? '0' : (this.props.minorLabelHeight  + 'px');
-    label.style.left = x + 'px';
+    if (this.options.horizontalOrientation == 'rtl') {
+      label.style.right = x + 'px';
+    }
+    else {
+      label.style.left = x + 'px';
+    }
   };
 
   /**
    * Create a minor line for the axis at position x
    * @param {Number} x
    * @param {String} orientation   "top" or "bottom" (default)
+   * @param {String} horizontalOrientation    "rtl" or "ltr" (default)
    * @private
    */
-  TimeAxis.prototype._repaintMinorLine = function (x, orientation) {
+  TimeAxis.prototype._repaintMinorLine = function (x, orientation, horizontalOrientation) {
     // reuse redundant line
     var line = this.dom.redundant.minorLines.shift();
 
@@ -12445,16 +12464,22 @@ return /******/ (function(modules) { // webpackBootstrap
       line.style.top = this.body.domProps.top.height + 'px';
     }
     line.style.height = props.minorLineHeight + 'px';
-    line.style.left = (x - props.minorLineWidth / 2) + 'px';
+    if (horizontalOrientation == 'rtl') {
+      line.style.right = (x - props.minorLineWidth / 2) + 'px';
+    }
+    else {
+      line.style.left = (x - props.minorLineWidth / 2) + 'px';
+    }
   };
 
   /**
    * Create a Major line for the axis at position x
    * @param {Number} x
    * @param {String} orientation   "top" or "bottom" (default)
+   * @param {String} horizontalOrientation    "rtl" or "ltr" (default)
    * @private
    */
-  TimeAxis.prototype._repaintMajorLine = function (x, orientation) {
+  TimeAxis.prototype._repaintMajorLine = function (x, orientation, horizontalOrientation) {
     // reuse redundant line
     var line = this.dom.redundant.majorLines.shift();
 
@@ -12473,7 +12498,12 @@ return /******/ (function(modules) { // webpackBootstrap
     else {
       line.style.top = this.body.domProps.top.height + 'px';
     }
-    line.style.left = (x - props.majorLineWidth / 2) + 'px';
+    if (horizontalOrientation == 'rtl') {
+      line.style.right = (x - props.majorLineWidth / 2) + 'px';
+    }
+    else {
+      line.style.left = (x - props.majorLineWidth / 2) + 'px';
+    }
     line.style.height = props.majorLineHeight + 'px';
   };
 
@@ -12528,7 +12558,156 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
-  var Item = __webpack_require__(29);
+  var Hammer = __webpack_require__(41);
+
+  /**
+   * @constructor Item
+   * @param {Object} data             Object containing (optional) parameters type,
+   *                                  start, end, content, group, className.
+   * @param {{toScreen: function, toTime: function}} conversion
+   *                                  Conversion functions from time to screen and vice versa
+   * @param {Object} options          Configuration options
+   *                                  // TODO: describe available options
+   */
+  function Item (data, conversion, options) {
+    this.id = null;
+    this.parent = null;
+    this.data = data;
+    this.dom = null;
+    this.conversion = conversion || {};
+    this.options = options || {};
+
+    this.selected = false;
+    this.displayed = false;
+    this.dirty = true;
+
+    this.top = null;
+    this.left = null;
+    this.width = null;
+    this.height = null;
+  }
+
+  /**
+   * Select current item
+   */
+  Item.prototype.select = function() {
+    this.selected = true;
+    if (this.displayed) this.redraw();
+  };
+
+  /**
+   * Unselect current item
+   */
+  Item.prototype.unselect = function() {
+    this.selected = false;
+    if (this.displayed) this.redraw();
+  };
+
+  /**
+   * Set a parent for the item
+   * @param {ItemSet | Group} parent
+   */
+  Item.prototype.setParent = function(parent) {
+    if (this.displayed) {
+      this.hide();
+      this.parent = parent;
+      if (this.parent) {
+        this.show();
+      }
+    }
+    else {
+      this.parent = parent;
+    }
+  };
+
+  /**
+   * Check whether this item is visible inside given range
+   * @returns {{start: Number, end: Number}} range with a timestamp for start and end
+   * @returns {boolean} True if visible
+   */
+  Item.prototype.isVisible = function(range) {
+    // Should be implemented by Item implementations
+    return false;
+  };
+
+  /**
+   * Show the Item in the DOM (when not already visible)
+   * @return {Boolean} changed
+   */
+  Item.prototype.show = function() {
+    return false;
+  };
+
+  /**
+   * Hide the Item from the DOM (when visible)
+   * @return {Boolean} changed
+   */
+  Item.prototype.hide = function() {
+    return false;
+  };
+
+  /**
+   * Repaint the item
+   */
+  Item.prototype.redraw = function() {
+    // should be implemented by the item
+  };
+
+  /**
+   * Reposition the Item horizontally
+   */
+  Item.prototype.repositionX = function() {
+    // should be implemented by the item
+  };
+
+  /**
+   * Reposition the Item vertically
+   */
+  Item.prototype.repositionY = function() {
+    // should be implemented by the item
+  };
+
+  /**
+   * Repaint a delete button on the top right of the item when the item is selected
+   * @param {HTMLElement} anchor
+   * @protected
+   */
+  Item.prototype._repaintDeleteButton = function (anchor) {
+    if (this.selected && this.options.editable.remove && !this.dom.deleteButton) {
+      // create and show button
+      var me = this;
+
+      var deleteButton = document.createElement('div');
+      deleteButton.className = 'delete';
+      deleteButton.title = 'Delete this item';
+
+      Hammer(deleteButton, {
+        preventDefault: true
+      }).on('tap', function (event) {
+        me.parent.removeFromDataSet(me);
+        event.stopPropagation();
+      });
+
+      anchor.appendChild(deleteButton);
+      this.dom.deleteButton = deleteButton;
+    }
+    else if (!this.selected && this.dom.deleteButton) {
+      // remove button
+      if (this.dom.deleteButton.parentNode) {
+        this.dom.deleteButton.parentNode.removeChild(this.dom.deleteButton);
+      }
+      this.dom.deleteButton = null;
+    }
+  };
+
+  module.exports = Item;
+
+
+/***/ },
+/* 29 */
+/***/ function(module, exports, __webpack_require__) {
+
+  var Item = __webpack_require__(28);
 
   /**
    * @constructor ItemBox
@@ -12728,14 +12907,27 @@ return /******/ (function(modules) { // webpackBootstrap
       this.left = start - this.width / 2;
     }
 
-    // reposition box
-    box.style.left = this.left + 'px';
+    if (this.options.horizontalOrientation == 'rtl') {
+        // reposition box
+        box.style.right = this.left + 'px';
 
-    // reposition line
-    line.style.left = (start - this.props.line.width / 2) + 'px';
+        // reposition line
+        line.style.right = (start - this.props.line.width / 2) + 'px';
 
-    // reposition dot
-    dot.style.left = (start - this.props.dot.width / 2) + 'px';
+        // reposition dot
+        // TODO why do we need to divide by 4 here?
+        dot.style.right = (start - this.props.dot.width / 4) + 'px';
+    }
+    else {
+        // reposition box
+        box.style.left = this.left + 'px';
+
+        // reposition line
+        line.style.left = (start - this.props.line.width / 2) + 'px';
+
+        // reposition dot
+        dot.style.left = (start - this.props.dot.width / 2) + 'px';
+    }
   };
 
   /**
@@ -12771,159 +12963,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 29 */
-/***/ function(module, exports, __webpack_require__) {
-
-  var Hammer = __webpack_require__(41);
-
-  /**
-   * @constructor Item
-   * @param {Object} data             Object containing (optional) parameters type,
-   *                                  start, end, content, group, className.
-   * @param {{toScreen: function, toTime: function}} conversion
-   *                                  Conversion functions from time to screen and vice versa
-   * @param {Object} options          Configuration options
-   *                                  // TODO: describe available options
-   */
-  function Item (data, conversion, options) {
-    this.id = null;
-    this.parent = null;
-    this.data = data;
-    this.dom = null;
-    this.conversion = conversion || {};
-    this.options = options || {};
-
-    this.selected = false;
-    this.displayed = false;
-    this.dirty = true;
-
-    this.top = null;
-    this.left = null;
-    this.width = null;
-    this.height = null;
-  }
-
-  /**
-   * Select current item
-   */
-  Item.prototype.select = function() {
-    this.selected = true;
-    if (this.displayed) this.redraw();
-  };
-
-  /**
-   * Unselect current item
-   */
-  Item.prototype.unselect = function() {
-    this.selected = false;
-    if (this.displayed) this.redraw();
-  };
-
-  /**
-   * Set a parent for the item
-   * @param {ItemSet | Group} parent
-   */
-  Item.prototype.setParent = function(parent) {
-    if (this.displayed) {
-      this.hide();
-      this.parent = parent;
-      if (this.parent) {
-        this.show();
-      }
-    }
-    else {
-      this.parent = parent;
-    }
-  };
-
-  /**
-   * Check whether this item is visible inside given range
-   * @returns {{start: Number, end: Number}} range with a timestamp for start and end
-   * @returns {boolean} True if visible
-   */
-  Item.prototype.isVisible = function(range) {
-    // Should be implemented by Item implementations
-    return false;
-  };
-
-  /**
-   * Show the Item in the DOM (when not already visible)
-   * @return {Boolean} changed
-   */
-  Item.prototype.show = function() {
-    return false;
-  };
-
-  /**
-   * Hide the Item from the DOM (when visible)
-   * @return {Boolean} changed
-   */
-  Item.prototype.hide = function() {
-    return false;
-  };
-
-  /**
-   * Repaint the item
-   */
-  Item.prototype.redraw = function() {
-    // should be implemented by the item
-  };
-
-  /**
-   * Reposition the Item horizontally
-   */
-  Item.prototype.repositionX = function() {
-    // should be implemented by the item
-  };
-
-  /**
-   * Reposition the Item vertically
-   */
-  Item.prototype.repositionY = function() {
-    // should be implemented by the item
-  };
-
-  /**
-   * Repaint a delete button on the top right of the item when the item is selected
-   * @param {HTMLElement} anchor
-   * @protected
-   */
-  Item.prototype._repaintDeleteButton = function (anchor) {
-    if (this.selected && this.options.editable.remove && !this.dom.deleteButton) {
-      // create and show button
-      var me = this;
-
-      var deleteButton = document.createElement('div');
-      deleteButton.className = 'delete';
-      deleteButton.title = 'Delete this item';
-
-      Hammer(deleteButton, {
-        preventDefault: true
-      }).on('tap', function (event) {
-        me.parent.removeFromDataSet(me);
-        event.stopPropagation();
-      });
-
-      anchor.appendChild(deleteButton);
-      this.dom.deleteButton = deleteButton;
-    }
-    else if (!this.selected && this.dom.deleteButton) {
-      // remove button
-      if (this.dom.deleteButton.parentNode) {
-        this.dom.deleteButton.parentNode.removeChild(this.dom.deleteButton);
-      }
-      this.dom.deleteButton = null;
-    }
-  };
-
-  module.exports = Item;
-
-
-/***/ },
 /* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
-  var Item = __webpack_require__(29);
+  var Item = __webpack_require__(28);
 
   /**
    * @constructor ItemPoint
@@ -13054,12 +13097,18 @@ return /******/ (function(modules) { // webpackBootstrap
       this.props.dot.height = dom.dot.offsetHeight;
       this.props.content.height = dom.content.offsetHeight;
 
-      // resize contents
-      dom.content.style.marginLeft = 2 * this.props.dot.width + 'px';
-      //dom.content.style.marginRight = ... + 'px'; // TODO: margin right
-
       dom.dot.style.top = ((this.height - this.props.dot.height) / 2) + 'px';
-      dom.dot.style.left = (this.props.dot.width / 2) + 'px';
+
+      if (this.options.horizontalOrientation == 'rtl') {
+        dom.dot.style.right = (this.props.dot.width / 2) + 'px';
+        // resize contents
+        dom.content.style.marginRight = 2 * this.props.dot.width + 'px';
+      }
+      else {
+        dom.dot.style.left = (this.props.dot.width / 2) + 'px';
+        // resize contents
+        dom.content.style.marginLeft = 2 * this.props.dot.width + 'px';
+      }
 
       this.dirty = false;
     }
@@ -13102,8 +13151,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
     this.left = start - this.props.dot.width;
 
-    // reposition point
-    this.dom.point.style.left = this.left + 'px';
+      if (this.options.horizontalOrientation == 'rtl') {
+        // reposition point
+        this.dom.point.style.right = this.left + 'px';
+      }
+      else {
+        // reposition point
+        this.dom.point.style.left = this.left + 'px';
+      }
   };
 
   /**
@@ -13130,7 +13185,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
   var Hammer = __webpack_require__(41);
-  var Item = __webpack_require__(29);
+  var Item = __webpack_require__(28);
 
   /**
    * @constructor ItemRange
@@ -13194,6 +13249,9 @@ return /******/ (function(modules) { // webpackBootstrap
       // contents box
       dom.content = document.createElement('div');
       dom.content.className = 'content';
+      if (this.options.horizontalOrientation == 'rtl') {
+        dom.content.style.float = 'right';
+      }
       dom.box.appendChild(dom.content);
 
       // attach this item as attribute
@@ -13338,7 +13396,12 @@ return /******/ (function(modules) { // webpackBootstrap
       this.width = boxWidth;
     }
 
-    this.dom.box.style.left = this.left + 'px';
+    if (this.options.horizontalOrientation == 'rtl') {
+      this.dom.box.style.right = this.left + 'px';
+    }
+    else {
+      this.dom.box.style.left = this.left + 'px';
+    }
     this.dom.box.style.width = boxWidth + 'px';
     this.dom.content.style.left = contentLeft + 'px';
   };
@@ -13428,7 +13491,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
   var Emitter = __webpack_require__(46);
   var Hammer = __webpack_require__(41);
-  var mousetrap = __webpack_require__(47);
+  var mousetrap = __webpack_require__(49);
   var util = __webpack_require__(1);
   var hammerUtil = __webpack_require__(43);
   var DataSet = __webpack_require__(3);
@@ -18996,7 +19059,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
   // first check if moment.js is already loaded in the browser window, if so,
   // use this instance. Else, load via commonjs.
-  module.exports = (typeof window !== 'undefined') && window['moment'] || __webpack_require__(48);
+  module.exports = (typeof window !== 'undefined') && window['moment'] || __webpack_require__(47);
 
 
 /***/ },
@@ -19006,7 +19069,7 @@ return /******/ (function(modules) { // webpackBootstrap
   // Only load hammer.js when in a browser environment
   // (loading hammer.js in a node.js environment gives errors)
   if (typeof window !== 'undefined') {
-    module.exports = window['Hammer'] || __webpack_require__(49);
+    module.exports = window['Hammer'] || __webpack_require__(48);
   }
   else {
     module.exports = function () {
@@ -19954,8 +20017,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
   var PhysicsMixin = __webpack_require__(56);
   var ClusterMixin = __webpack_require__(50);
-  var SectorsMixin = __webpack_require__(51);
-  var SelectionMixin = __webpack_require__(52);
+  var SectorsMixin = __webpack_require__(52);
+  var SelectionMixin = __webpack_require__(51);
   var ManipulationMixin = __webpack_require__(53);
   var NavigationMixin = __webpack_require__(54);
   var HierarchicalLayoutMixin = __webpack_require__(55);
@@ -20326,813 +20389,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-  /**
-   * Copyright 2012 Craig Campbell
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   *
-   * Mousetrap is a simple keyboard shortcut library for Javascript with
-   * no external dependencies
-   *
-   * @version 1.1.2
-   * @url craig.is/killing/mice
-   */
-
-    /**
-     * mapping of special keycodes to their corresponding keys
-     *
-     * everything in this dictionary cannot use keypress events
-     * so it has to be here to map to the correct keycodes for
-     * keyup/keydown events
-     *
-     * @type {Object}
-     */
-    var _MAP = {
-            8: 'backspace',
-            9: 'tab',
-            13: 'enter',
-            16: 'shift',
-            17: 'ctrl',
-            18: 'alt',
-            20: 'capslock',
-            27: 'esc',
-            32: 'space',
-            33: 'pageup',
-            34: 'pagedown',
-            35: 'end',
-            36: 'home',
-            37: 'left',
-            38: 'up',
-            39: 'right',
-            40: 'down',
-            45: 'ins',
-            46: 'del',
-            91: 'meta',
-            93: 'meta',
-            224: 'meta'
-        },
-
-        /**
-         * mapping for special characters so they can support
-         *
-         * this dictionary is only used incase you want to bind a
-         * keyup or keydown event to one of these keys
-         *
-         * @type {Object}
-         */
-        _KEYCODE_MAP = {
-            106: '*',
-            107: '+',
-            109: '-',
-            110: '.',
-            111 : '/',
-            186: ';',
-            187: '=',
-            188: ',',
-            189: '-',
-            190: '.',
-            191: '/',
-            192: '`',
-            219: '[',
-            220: '\\',
-            221: ']',
-            222: '\''
-        },
-
-        /**
-         * this is a mapping of keys that require shift on a US keypad
-         * back to the non shift equivelents
-         *
-         * this is so you can use keyup events with these keys
-         *
-         * note that this will only work reliably on US keyboards
-         *
-         * @type {Object}
-         */
-        _SHIFT_MAP = {
-            '~': '`',
-            '!': '1',
-            '@': '2',
-            '#': '3',
-            '$': '4',
-            '%': '5',
-            '^': '6',
-            '&': '7',
-            '*': '8',
-            '(': '9',
-            ')': '0',
-            '_': '-',
-            '+': '=',
-            ':': ';',
-            '\"': '\'',
-            '<': ',',
-            '>': '.',
-            '?': '/',
-            '|': '\\'
-        },
-
-        /**
-         * this is a list of special strings you can use to map
-         * to modifier keys when you specify your keyboard shortcuts
-         *
-         * @type {Object}
-         */
-        _SPECIAL_ALIASES = {
-            'option': 'alt',
-            'command': 'meta',
-            'return': 'enter',
-            'escape': 'esc'
-        },
-
-        /**
-         * variable to store the flipped version of _MAP from above
-         * needed to check if we should use keypress or not when no action
-         * is specified
-         *
-         * @type {Object|undefined}
-         */
-        _REVERSE_MAP,
-
-        /**
-         * a list of all the callbacks setup via Mousetrap.bind()
-         *
-         * @type {Object}
-         */
-        _callbacks = {},
-
-        /**
-         * direct map of string combinations to callbacks used for trigger()
-         *
-         * @type {Object}
-         */
-        _direct_map = {},
-
-        /**
-         * keeps track of what level each sequence is at since multiple
-         * sequences can start out with the same sequence
-         *
-         * @type {Object}
-         */
-        _sequence_levels = {},
-
-        /**
-         * variable to store the setTimeout call
-         *
-         * @type {null|number}
-         */
-        _reset_timer,
-
-        /**
-         * temporary state where we will ignore the next keyup
-         *
-         * @type {boolean|string}
-         */
-        _ignore_next_keyup = false,
-
-        /**
-         * are we currently inside of a sequence?
-         * type of action ("keyup" or "keydown" or "keypress") or false
-         *
-         * @type {boolean|string}
-         */
-        _inside_sequence = false;
-
-    /**
-     * loop through the f keys, f1 to f19 and add them to the map
-     * programatically
-     */
-    for (var i = 1; i < 20; ++i) {
-        _MAP[111 + i] = 'f' + i;
-    }
-
-    /**
-     * loop through to map numbers on the numeric keypad
-     */
-    for (i = 0; i <= 9; ++i) {
-        _MAP[i + 96] = i;
-    }
-
-    /**
-     * cross browser add event method
-     *
-     * @param {Element|HTMLDocument} object
-     * @param {string} type
-     * @param {Function} callback
-     * @returns void
-     */
-    function _addEvent(object, type, callback) {
-        if (object.addEventListener) {
-            return object.addEventListener(type, callback, false);
-        }
-
-        object.attachEvent('on' + type, callback);
-    }
-
-    /**
-     * takes the event and returns the key character
-     *
-     * @param {Event} e
-     * @return {string}
-     */
-    function _characterFromEvent(e) {
-
-        // for keypress events we should return the character as is
-        if (e.type == 'keypress') {
-            return String.fromCharCode(e.which);
-        }
-
-        // for non keypress events the special maps are needed
-        if (_MAP[e.which]) {
-            return _MAP[e.which];
-        }
-
-        if (_KEYCODE_MAP[e.which]) {
-            return _KEYCODE_MAP[e.which];
-        }
-
-        // if it is not in the special map
-        return String.fromCharCode(e.which).toLowerCase();
-    }
-
-    /**
-     * should we stop this event before firing off callbacks
-     *
-     * @param {Event} e
-     * @return {boolean}
-     */
-    function _stop(e) {
-        var element = e.target || e.srcElement,
-            tag_name = element.tagName;
-
-        // if the element has the class "mousetrap" then no need to stop
-        if ((' ' + element.className + ' ').indexOf(' mousetrap ') > -1) {
-            return false;
-        }
-
-        // stop for input, select, and textarea
-        return tag_name == 'INPUT' || tag_name == 'SELECT' || tag_name == 'TEXTAREA' || (element.contentEditable && element.contentEditable == 'true');
-    }
-
-    /**
-     * checks if two arrays are equal
-     *
-     * @param {Array} modifiers1
-     * @param {Array} modifiers2
-     * @returns {boolean}
-     */
-    function _modifiersMatch(modifiers1, modifiers2) {
-        return modifiers1.sort().join(',') === modifiers2.sort().join(',');
-    }
-
-    /**
-     * resets all sequence counters except for the ones passed in
-     *
-     * @param {Object} do_not_reset
-     * @returns void
-     */
-    function _resetSequences(do_not_reset) {
-        do_not_reset = do_not_reset || {};
-
-        var active_sequences = false,
-            key;
-
-        for (key in _sequence_levels) {
-            if (do_not_reset[key]) {
-                active_sequences = true;
-                continue;
-            }
-            _sequence_levels[key] = 0;
-        }
-
-        if (!active_sequences) {
-            _inside_sequence = false;
-        }
-    }
-
-    /**
-     * finds all callbacks that match based on the keycode, modifiers,
-     * and action
-     *
-     * @param {string} character
-     * @param {Array} modifiers
-     * @param {string} action
-     * @param {boolean=} remove - should we remove any matches
-     * @param {string=} combination
-     * @returns {Array}
-     */
-    function _getMatches(character, modifiers, action, remove, combination) {
-        var i,
-            callback,
-            matches = [];
-
-        // if there are no events related to this keycode
-        if (!_callbacks[character]) {
-            return [];
-        }
-
-        // if a modifier key is coming up on its own we should allow it
-        if (action == 'keyup' && _isModifier(character)) {
-            modifiers = [character];
-        }
-
-        // loop through all callbacks for the key that was pressed
-        // and see if any of them match
-        for (i = 0; i < _callbacks[character].length; ++i) {
-            callback = _callbacks[character][i];
-
-            // if this is a sequence but it is not at the right level
-            // then move onto the next match
-            if (callback.seq && _sequence_levels[callback.seq] != callback.level) {
-                continue;
-            }
-
-            // if the action we are looking for doesn't match the action we got
-            // then we should keep going
-            if (action != callback.action) {
-                continue;
-            }
-
-            // if this is a keypress event that means that we need to only
-            // look at the character, otherwise check the modifiers as
-            // well
-            if (action == 'keypress' || _modifiersMatch(modifiers, callback.modifiers)) {
-
-                // remove is used so if you change your mind and call bind a
-                // second time with a new function the first one is overwritten
-                if (remove && callback.combo == combination) {
-                    _callbacks[character].splice(i, 1);
-                }
-
-                matches.push(callback);
-            }
-        }
-
-        return matches;
-    }
-
-    /**
-     * takes a key event and figures out what the modifiers are
-     *
-     * @param {Event} e
-     * @returns {Array}
-     */
-    function _eventModifiers(e) {
-        var modifiers = [];
-
-        if (e.shiftKey) {
-            modifiers.push('shift');
-        }
-
-        if (e.altKey) {
-            modifiers.push('alt');
-        }
-
-        if (e.ctrlKey) {
-            modifiers.push('ctrl');
-        }
-
-        if (e.metaKey) {
-            modifiers.push('meta');
-        }
-
-        return modifiers;
-    }
-
-    /**
-     * actually calls the callback function
-     *
-     * if your callback function returns false this will use the jquery
-     * convention - prevent default and stop propogation on the event
-     *
-     * @param {Function} callback
-     * @param {Event} e
-     * @returns void
-     */
-    function _fireCallback(callback, e) {
-        if (callback(e) === false) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-
-            e.returnValue = false;
-            e.cancelBubble = true;
-        }
-    }
-
-    /**
-     * handles a character key event
-     *
-     * @param {string} character
-     * @param {Event} e
-     * @returns void
-     */
-    function _handleCharacter(character, e) {
-
-        // if this event should not happen stop here
-        if (_stop(e)) {
-            return;
-        }
-
-        var callbacks = _getMatches(character, _eventModifiers(e), e.type),
-            i,
-            do_not_reset = {},
-            processed_sequence_callback = false;
-
-        // loop through matching callbacks for this key event
-        for (i = 0; i < callbacks.length; ++i) {
-
-            // fire for all sequence callbacks
-            // this is because if for example you have multiple sequences
-            // bound such as "g i" and "g t" they both need to fire the
-            // callback for matching g cause otherwise you can only ever
-            // match the first one
-            if (callbacks[i].seq) {
-                processed_sequence_callback = true;
-
-                // keep a list of which sequences were matches for later
-                do_not_reset[callbacks[i].seq] = 1;
-                _fireCallback(callbacks[i].callback, e);
-                continue;
-            }
-
-            // if there were no sequence matches but we are still here
-            // that means this is a regular match so we should fire that
-            if (!processed_sequence_callback && !_inside_sequence) {
-                _fireCallback(callbacks[i].callback, e);
-            }
-        }
-
-        // if you are inside of a sequence and the key you are pressing
-        // is not a modifier key then we should reset all sequences
-        // that were not matched by this key event
-        if (e.type == _inside_sequence && !_isModifier(character)) {
-            _resetSequences(do_not_reset);
-        }
-    }
-
-    /**
-     * handles a keydown event
-     *
-     * @param {Event} e
-     * @returns void
-     */
-    function _handleKey(e) {
-
-        // normalize e.which for key events
-        // @see http://stackoverflow.com/questions/4285627/javascript-keycode-vs-charcode-utter-confusion
-        e.which = typeof e.which == "number" ? e.which : e.keyCode;
-
-        var character = _characterFromEvent(e);
-
-        // no character found then stop
-        if (!character) {
-            return;
-        }
-
-        if (e.type == 'keyup' && _ignore_next_keyup == character) {
-            _ignore_next_keyup = false;
-            return;
-        }
-
-        _handleCharacter(character, e);
-    }
-
-    /**
-     * determines if the keycode specified is a modifier key or not
-     *
-     * @param {string} key
-     * @returns {boolean}
-     */
-    function _isModifier(key) {
-        return key == 'shift' || key == 'ctrl' || key == 'alt' || key == 'meta';
-    }
-
-    /**
-     * called to set a 1 second timeout on the specified sequence
-     *
-     * this is so after each key press in the sequence you have 1 second
-     * to press the next key before you have to start over
-     *
-     * @returns void
-     */
-    function _resetSequenceTimer() {
-        clearTimeout(_reset_timer);
-        _reset_timer = setTimeout(_resetSequences, 1000);
-    }
-
-    /**
-     * reverses the map lookup so that we can look for specific keys
-     * to see what can and can't use keypress
-     *
-     * @return {Object}
-     */
-    function _getReverseMap() {
-        if (!_REVERSE_MAP) {
-            _REVERSE_MAP = {};
-            for (var key in _MAP) {
-
-                // pull out the numeric keypad from here cause keypress should
-                // be able to detect the keys from the character
-                if (key > 95 && key < 112) {
-                    continue;
-                }
-
-                if (_MAP.hasOwnProperty(key)) {
-                    _REVERSE_MAP[_MAP[key]] = key;
-                }
-            }
-        }
-        return _REVERSE_MAP;
-    }
-
-    /**
-     * picks the best action based on the key combination
-     *
-     * @param {string} key - character for key
-     * @param {Array} modifiers
-     * @param {string=} action passed in
-     */
-    function _pickBestAction(key, modifiers, action) {
-
-        // if no action was picked in we should try to pick the one
-        // that we think would work best for this key
-        if (!action) {
-            action = _getReverseMap()[key] ? 'keydown' : 'keypress';
-        }
-
-        // modifier keys don't work as expected with keypress,
-        // switch to keydown
-        if (action == 'keypress' && modifiers.length) {
-            action = 'keydown';
-        }
-
-        return action;
-    }
-
-    /**
-     * binds a key sequence to an event
-     *
-     * @param {string} combo - combo specified in bind call
-     * @param {Array} keys
-     * @param {Function} callback
-     * @param {string=} action
-     * @returns void
-     */
-    function _bindSequence(combo, keys, callback, action) {
-
-        // start off by adding a sequence level record for this combination
-        // and setting the level to 0
-        _sequence_levels[combo] = 0;
-
-        // if there is no action pick the best one for the first key
-        // in the sequence
-        if (!action) {
-            action = _pickBestAction(keys[0], []);
-        }
-
-        /**
-         * callback to increase the sequence level for this sequence and reset
-         * all other sequences that were active
-         *
-         * @param {Event} e
-         * @returns void
-         */
-        var _increaseSequence = function(e) {
-                _inside_sequence = action;
-                ++_sequence_levels[combo];
-                _resetSequenceTimer();
-            },
-
-            /**
-             * wraps the specified callback inside of another function in order
-             * to reset all sequence counters as soon as this sequence is done
-             *
-             * @param {Event} e
-             * @returns void
-             */
-            _callbackAndReset = function(e) {
-                _fireCallback(callback, e);
-
-                // we should ignore the next key up if the action is key down
-                // or keypress.  this is so if you finish a sequence and
-                // release the key the final key will not trigger a keyup
-                if (action !== 'keyup') {
-                    _ignore_next_keyup = _characterFromEvent(e);
-                }
-
-                // weird race condition if a sequence ends with the key
-                // another sequence begins with
-                setTimeout(_resetSequences, 10);
-            },
-            i;
-
-        // loop through keys one at a time and bind the appropriate callback
-        // function.  for any key leading up to the final one it should
-        // increase the sequence. after the final, it should reset all sequences
-        for (i = 0; i < keys.length; ++i) {
-            _bindSingle(keys[i], i < keys.length - 1 ? _increaseSequence : _callbackAndReset, action, combo, i);
-        }
-    }
-
-    /**
-     * binds a single keyboard combination
-     *
-     * @param {string} combination
-     * @param {Function} callback
-     * @param {string=} action
-     * @param {string=} sequence_name - name of sequence if part of sequence
-     * @param {number=} level - what part of the sequence the command is
-     * @returns void
-     */
-    function _bindSingle(combination, callback, action, sequence_name, level) {
-
-        // make sure multiple spaces in a row become a single space
-        combination = combination.replace(/\s+/g, ' ');
-
-        var sequence = combination.split(' '),
-            i,
-            key,
-            keys,
-            modifiers = [];
-
-        // if this pattern is a sequence of keys then run through this method
-        // to reprocess each pattern one key at a time
-        if (sequence.length > 1) {
-            return _bindSequence(combination, sequence, callback, action);
-        }
-
-        // take the keys from this pattern and figure out what the actual
-        // pattern is all about
-        keys = combination === '+' ? ['+'] : combination.split('+');
-
-        for (i = 0; i < keys.length; ++i) {
-            key = keys[i];
-
-            // normalize key names
-            if (_SPECIAL_ALIASES[key]) {
-                key = _SPECIAL_ALIASES[key];
-            }
-
-            // if this is not a keypress event then we should
-            // be smart about using shift keys
-            // this will only work for US keyboards however
-            if (action && action != 'keypress' && _SHIFT_MAP[key]) {
-                key = _SHIFT_MAP[key];
-                modifiers.push('shift');
-            }
-
-            // if this key is a modifier then add it to the list of modifiers
-            if (_isModifier(key)) {
-                modifiers.push(key);
-            }
-        }
-
-        // depending on what the key combination is
-        // we will try to pick the best event for it
-        action = _pickBestAction(key, modifiers, action);
-
-        // make sure to initialize array if this is the first time
-        // a callback is added for this key
-        if (!_callbacks[key]) {
-            _callbacks[key] = [];
-        }
-
-        // remove an existing match if there is one
-        _getMatches(key, modifiers, action, !sequence_name, combination);
-
-        // add this call back to the array
-        // if it is a sequence put it at the beginning
-        // if not put it at the end
-        //
-        // this is important because the way these are processed expects
-        // the sequence ones to come first
-        _callbacks[key][sequence_name ? 'unshift' : 'push']({
-            callback: callback,
-            modifiers: modifiers,
-            action: action,
-            seq: sequence_name,
-            level: level,
-            combo: combination
-        });
-    }
-
-    /**
-     * binds multiple combinations to the same callback
-     *
-     * @param {Array} combinations
-     * @param {Function} callback
-     * @param {string|undefined} action
-     * @returns void
-     */
-    function _bindMultiple(combinations, callback, action) {
-        for (var i = 0; i < combinations.length; ++i) {
-            _bindSingle(combinations[i], callback, action);
-        }
-    }
-
-    // start!
-    _addEvent(document, 'keypress', _handleKey);
-    _addEvent(document, 'keydown', _handleKey);
-    _addEvent(document, 'keyup', _handleKey);
-
-    var mousetrap = {
-
-        /**
-         * binds an event to mousetrap
-         *
-         * can be a single key, a combination of keys separated with +,
-         * a comma separated list of keys, an array of keys, or
-         * a sequence of keys separated by spaces
-         *
-         * be sure to list the modifier keys first to make sure that the
-         * correct key ends up getting bound (the last key in the pattern)
-         *
-         * @param {string|Array} keys
-         * @param {Function} callback
-         * @param {string=} action - 'keypress', 'keydown', or 'keyup'
-         * @returns void
-         */
-        bind: function(keys, callback, action) {
-            _bindMultiple(keys instanceof Array ? keys : [keys], callback, action);
-            _direct_map[keys + ':' + action] = callback;
-            return this;
-        },
-
-        /**
-         * unbinds an event to mousetrap
-         *
-         * the unbinding sets the callback function of the specified key combo
-         * to an empty function and deletes the corresponding key in the
-         * _direct_map dict.
-         *
-         * the keycombo+action has to be exactly the same as
-         * it was defined in the bind method
-         *
-         * TODO: actually remove this from the _callbacks dictionary instead
-         * of binding an empty function
-         *
-         * @param {string|Array} keys
-         * @param {string} action
-         * @returns void
-         */
-        unbind: function(keys, action) {
-            if (_direct_map[keys + ':' + action]) {
-                delete _direct_map[keys + ':' + action];
-                this.bind(keys, function() {}, action);
-            }
-            return this;
-        },
-
-        /**
-         * triggers an event that has already been bound
-         *
-         * @param {string} keys
-         * @param {string=} action
-         * @returns void
-         */
-        trigger: function(keys, action) {
-            _direct_map[keys + ':' + action]();
-            return this;
-        },
-
-        /**
-         * resets the library back to its initial state.  this is useful
-         * if you want to clear out the current keyboard shortcuts and bind
-         * new ones - for example if you switch to another page
-         *
-         * @returns void
-         */
-        reset: function() {
-            _callbacks = {};
-            _direct_map = {};
-            return this;
-        }
-    };
-
-  module.exports = mousetrap;
-
-
-
-/***/ },
-/* 48 */
-/***/ function(module, exports, __webpack_require__) {
-
   var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global, module) {//! moment.js
-  //! version : 2.8.1
+  //! version : 2.8.2
   //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
   //! license : MIT
   //! momentjs.com
@@ -21143,11 +20401,12 @@ return /******/ (function(modules) { // webpackBootstrap
       ************************************/
 
       var moment,
-          VERSION = '2.8.1',
+          VERSION = '2.8.2',
           // the global-scope this is NOT the global object in Node.js
           globalScope = typeof global !== 'undefined' ? global : this,
           oldGlobalMoment,
           round = Math.round,
+          hasOwnProperty = Object.prototype.hasOwnProperty,
           i,
 
           YEAR = 0,
@@ -21221,7 +20480,7 @@ return /******/ (function(modules) { // webpackBootstrap
               ['HH', /(T| )\d\d/]
           ],
 
-          // timezone chunker "+10:00" > ["10", "00"] or "-1530" > ["-15", "30"]
+          // timezone chunker '+10:00' > ['10', '00'] or '-1530' > ['-15', '30']
           parseTimezoneChunker = /([\+\-]|\d\d)/gi,
 
           // getter and setter names
@@ -21426,6 +20685,10 @@ return /******/ (function(modules) { // webpackBootstrap
           }
       }
 
+      function hasOwnProp(a, b) {
+          return hasOwnProperty.call(a, b);
+      }
+
       function defaultParsingFlags() {
           // We need to deep clone this object, and es5 standard is not very
           // helpful.
@@ -21446,7 +20709,7 @@ return /******/ (function(modules) { // webpackBootstrap
       function printMsg(msg) {
           if (moment.suppressDeprecationWarnings === false &&
                   typeof console !== 'undefined' && console.warn) {
-              console.warn("Deprecation warning: " + msg);
+              console.warn('Deprecation warning: ' + msg);
           }
       }
 
@@ -21549,16 +20812,16 @@ return /******/ (function(modules) { // webpackBootstrap
 
       function extend(a, b) {
           for (var i in b) {
-              if (b.hasOwnProperty(i)) {
+              if (hasOwnProp(b, i)) {
                   a[i] = b[i];
               }
           }
 
-          if (b.hasOwnProperty('toString')) {
+          if (hasOwnProp(b, 'toString')) {
               a.toString = b.toString;
           }
 
-          if (b.hasOwnProperty('valueOf')) {
+          if (hasOwnProp(b, 'valueOf')) {
               a.valueOf = b.valueOf;
           }
 
@@ -21666,7 +20929,7 @@ return /******/ (function(modules) { // webpackBootstrap
               var dur, tmp;
               //invert the arguments, but complain about it
               if (period !== null && !isNaN(+period)) {
-                  deprecateSimple(name, "moment()." + name  + "(period, number) is deprecated. Please use moment()." + name + "(number, period).");
+                  deprecateSimple(name, 'moment().' + name  + '(period, number) is deprecated. Please use moment().' + name + '(number, period).');
                   tmp = val; val = period; period = tmp;
               }
 
@@ -21736,7 +20999,7 @@ return /******/ (function(modules) { // webpackBootstrap
               prop;
 
           for (prop in inputObject) {
-              if (inputObject.hasOwnProperty(prop)) {
+              if (hasOwnProp(inputObject, prop)) {
                   normalizedProp = normalizeUnits(prop);
                   if (normalizedProp) {
                       normalizedInput[normalizedProp] = inputObject[prop];
@@ -22656,7 +21919,7 @@ return /******/ (function(modules) { // webpackBootstrap
               config._pf.iso = true;
               for (i = 0, l = isoDates.length; i < l; i++) {
                   if (isoDates[i][1].exec(string)) {
-                      // match[5] should be "T" or undefined
+                      // match[5] should be 'T' or undefined
                       config._f = isoDates[i][0] + (match[6] || ' ');
                       break;
                   }
@@ -22864,7 +22127,7 @@ return /******/ (function(modules) { // webpackBootstrap
       moment = function (input, format, locale, strict) {
           var c;
 
-          if (typeof(locale) === "boolean") {
+          if (typeof(locale) === 'boolean') {
               strict = locale;
               locale = undefined;
           }
@@ -22932,7 +22195,7 @@ return /******/ (function(modules) { // webpackBootstrap
       moment.utc = function (input, format, locale, strict) {
           var c;
 
-          if (typeof(locale) === "boolean") {
+          if (typeof(locale) === 'boolean') {
               strict = locale;
               locale = undefined;
           }
@@ -23019,7 +22282,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
           ret = new Duration(duration);
 
-          if (moment.isDuration(input) && input.hasOwnProperty('_locale')) {
+          if (moment.isDuration(input) && hasOwnProp(input, '_locale')) {
               ret._locale = input._locale;
           }
 
@@ -23056,7 +22319,7 @@ return /******/ (function(modules) { // webpackBootstrap
       };
 
       moment.lang = deprecate(
-          "moment.lang is deprecated. Use moment.locale instead.",
+          'moment.lang is deprecated. Use moment.locale instead.',
           function (key, value) {
               return moment.locale(key, value);
           }
@@ -23068,7 +22331,7 @@ return /******/ (function(modules) { // webpackBootstrap
       moment.locale = function (key, values) {
           var data;
           if (key) {
-              if (typeof(values) !== "undefined") {
+              if (typeof(values) !== 'undefined') {
                   data = moment.defineLocale(key, values);
               }
               else {
@@ -23103,7 +22366,7 @@ return /******/ (function(modules) { // webpackBootstrap
       };
 
       moment.langData = deprecate(
-          "moment.langData is deprecated. Use moment.localeData instead.",
+          'moment.langData is deprecated. Use moment.localeData instead.',
           function (key) {
               return moment.localeData(key);
           }
@@ -23136,7 +22399,7 @@ return /******/ (function(modules) { // webpackBootstrap
       // compare moment object
       moment.isMoment = function (obj) {
           return obj instanceof Moment ||
-              (obj != null &&  obj.hasOwnProperty('_isAMomentObject'));
+              (obj != null && hasOwnProp(obj, '_isAMomentObject'));
       };
 
       // for typechecking Duration objects
@@ -23192,7 +22455,7 @@ return /******/ (function(modules) { // webpackBootstrap
           },
 
           toString : function () {
-              return this.clone().locale('en').format("ddd MMM DD YYYY HH:mm:ss [GMT]ZZ");
+              return this.clone().locale('en').format('ddd MMM DD YYYY HH:mm:ss [GMT]ZZ');
           },
 
           toDate : function () {
@@ -23575,7 +22838,7 @@ return /******/ (function(modules) { // webpackBootstrap
           },
 
           lang : deprecate(
-              "moment().lang() is deprecated. Use moment().localeData() instead.",
+              'moment().lang() is deprecated. Use moment().localeData() instead.',
               function (key) {
                   if (key === undefined) {
                       return this.localeData();
@@ -23807,8 +23070,8 @@ return /******/ (function(modules) { // webpackBootstrap
           locale : moment.fn.locale,
 
           toIsoString : deprecate(
-              "toIsoString() is deprecated. Please use toISOString() instead " +
-              "(notice the capitals)",
+              'toIsoString() is deprecated. Please use toISOString() instead ' +
+              '(notice the capitals)',
               function () {
                   return this.toISOString();
               }
@@ -23845,6 +23108,8 @@ return /******/ (function(modules) { // webpackBootstrap
           }
       });
 
+      moment.duration.fn.toString = moment.duration.fn.toISOString;
+
       function makeDurationGetter(name) {
           moment.duration.fn[name] = function () {
               return this._data[name];
@@ -23852,7 +23117,7 @@ return /******/ (function(modules) { // webpackBootstrap
       }
 
       for (i in unitMillisecondFactors) {
-          if (unitMillisecondFactors.hasOwnProperty(i)) {
+          if (hasOwnProp(unitMillisecondFactors, i)) {
               makeDurationGetter(i.toLowerCase());
           }
       }
@@ -23926,24 +23191,24 @@ return /******/ (function(modules) { // webpackBootstrap
       if (hasModule) {
           module.exports = moment;
       } else if (true) {
-          !(__WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, module) {
+          !(__WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports, module) {
               if (module.config && module.config() && module.config().noGlobal === true) {
                   // release the global variable
                   globalScope.moment = oldGlobalMoment;
               }
 
               return moment;
-          }.call(exports, __webpack_require__, exports, module)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+          }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
           makeGlobal(true);
       } else {
           makeGlobal();
       }
   }).call(this);
   
-  /* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(58)(module)))
+  /* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(61)(module)))
 
 /***/ },
-/* 49 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
   var __WEBPACK_AMD_DEFINE_RESULT__;/*! Hammer.JS - v1.1.3 - 2014-05-20
@@ -26096,9 +25361,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
   // AMD export
   if(true) {
-      !(__WEBPACK_AMD_DEFINE_RESULT__ = (function() {
+      !(__WEBPACK_AMD_DEFINE_RESULT__ = function() {
           return Hammer;
-      }.call(exports, __webpack_require__, exports, module)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+      }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
   // commonjs export
   } else if(typeof module !== 'undefined' && module.exports) {
       module.exports = Hammer;
@@ -26108,6 +25373,811 @@ return /******/ (function(modules) { // webpackBootstrap
   }
 
   })(window);
+
+/***/ },
+/* 49 */
+/***/ function(module, exports, __webpack_require__) {
+
+  /**
+   * Copyright 2012 Craig Campbell
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   * http://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   *
+   * Mousetrap is a simple keyboard shortcut library for Javascript with
+   * no external dependencies
+   *
+   * @version 1.1.2
+   * @url craig.is/killing/mice
+   */
+
+    /**
+     * mapping of special keycodes to their corresponding keys
+     *
+     * everything in this dictionary cannot use keypress events
+     * so it has to be here to map to the correct keycodes for
+     * keyup/keydown events
+     *
+     * @type {Object}
+     */
+    var _MAP = {
+            8: 'backspace',
+            9: 'tab',
+            13: 'enter',
+            16: 'shift',
+            17: 'ctrl',
+            18: 'alt',
+            20: 'capslock',
+            27: 'esc',
+            32: 'space',
+            33: 'pageup',
+            34: 'pagedown',
+            35: 'end',
+            36: 'home',
+            37: 'left',
+            38: 'up',
+            39: 'right',
+            40: 'down',
+            45: 'ins',
+            46: 'del',
+            91: 'meta',
+            93: 'meta',
+            224: 'meta'
+        },
+
+        /**
+         * mapping for special characters so they can support
+         *
+         * this dictionary is only used incase you want to bind a
+         * keyup or keydown event to one of these keys
+         *
+         * @type {Object}
+         */
+        _KEYCODE_MAP = {
+            106: '*',
+            107: '+',
+            109: '-',
+            110: '.',
+            111 : '/',
+            186: ';',
+            187: '=',
+            188: ',',
+            189: '-',
+            190: '.',
+            191: '/',
+            192: '`',
+            219: '[',
+            220: '\\',
+            221: ']',
+            222: '\''
+        },
+
+        /**
+         * this is a mapping of keys that require shift on a US keypad
+         * back to the non shift equivelents
+         *
+         * this is so you can use keyup events with these keys
+         *
+         * note that this will only work reliably on US keyboards
+         *
+         * @type {Object}
+         */
+        _SHIFT_MAP = {
+            '~': '`',
+            '!': '1',
+            '@': '2',
+            '#': '3',
+            '$': '4',
+            '%': '5',
+            '^': '6',
+            '&': '7',
+            '*': '8',
+            '(': '9',
+            ')': '0',
+            '_': '-',
+            '+': '=',
+            ':': ';',
+            '\"': '\'',
+            '<': ',',
+            '>': '.',
+            '?': '/',
+            '|': '\\'
+        },
+
+        /**
+         * this is a list of special strings you can use to map
+         * to modifier keys when you specify your keyboard shortcuts
+         *
+         * @type {Object}
+         */
+        _SPECIAL_ALIASES = {
+            'option': 'alt',
+            'command': 'meta',
+            'return': 'enter',
+            'escape': 'esc'
+        },
+
+        /**
+         * variable to store the flipped version of _MAP from above
+         * needed to check if we should use keypress or not when no action
+         * is specified
+         *
+         * @type {Object|undefined}
+         */
+        _REVERSE_MAP,
+
+        /**
+         * a list of all the callbacks setup via Mousetrap.bind()
+         *
+         * @type {Object}
+         */
+        _callbacks = {},
+
+        /**
+         * direct map of string combinations to callbacks used for trigger()
+         *
+         * @type {Object}
+         */
+        _direct_map = {},
+
+        /**
+         * keeps track of what level each sequence is at since multiple
+         * sequences can start out with the same sequence
+         *
+         * @type {Object}
+         */
+        _sequence_levels = {},
+
+        /**
+         * variable to store the setTimeout call
+         *
+         * @type {null|number}
+         */
+        _reset_timer,
+
+        /**
+         * temporary state where we will ignore the next keyup
+         *
+         * @type {boolean|string}
+         */
+        _ignore_next_keyup = false,
+
+        /**
+         * are we currently inside of a sequence?
+         * type of action ("keyup" or "keydown" or "keypress") or false
+         *
+         * @type {boolean|string}
+         */
+        _inside_sequence = false;
+
+    /**
+     * loop through the f keys, f1 to f19 and add them to the map
+     * programatically
+     */
+    for (var i = 1; i < 20; ++i) {
+        _MAP[111 + i] = 'f' + i;
+    }
+
+    /**
+     * loop through to map numbers on the numeric keypad
+     */
+    for (i = 0; i <= 9; ++i) {
+        _MAP[i + 96] = i;
+    }
+
+    /**
+     * cross browser add event method
+     *
+     * @param {Element|HTMLDocument} object
+     * @param {string} type
+     * @param {Function} callback
+     * @returns void
+     */
+    function _addEvent(object, type, callback) {
+        if (object.addEventListener) {
+            return object.addEventListener(type, callback, false);
+        }
+
+        object.attachEvent('on' + type, callback);
+    }
+
+    /**
+     * takes the event and returns the key character
+     *
+     * @param {Event} e
+     * @return {string}
+     */
+    function _characterFromEvent(e) {
+
+        // for keypress events we should return the character as is
+        if (e.type == 'keypress') {
+            return String.fromCharCode(e.which);
+        }
+
+        // for non keypress events the special maps are needed
+        if (_MAP[e.which]) {
+            return _MAP[e.which];
+        }
+
+        if (_KEYCODE_MAP[e.which]) {
+            return _KEYCODE_MAP[e.which];
+        }
+
+        // if it is not in the special map
+        return String.fromCharCode(e.which).toLowerCase();
+    }
+
+    /**
+     * should we stop this event before firing off callbacks
+     *
+     * @param {Event} e
+     * @return {boolean}
+     */
+    function _stop(e) {
+        var element = e.target || e.srcElement,
+            tag_name = element.tagName;
+
+        // if the element has the class "mousetrap" then no need to stop
+        if ((' ' + element.className + ' ').indexOf(' mousetrap ') > -1) {
+            return false;
+        }
+
+        // stop for input, select, and textarea
+        return tag_name == 'INPUT' || tag_name == 'SELECT' || tag_name == 'TEXTAREA' || (element.contentEditable && element.contentEditable == 'true');
+    }
+
+    /**
+     * checks if two arrays are equal
+     *
+     * @param {Array} modifiers1
+     * @param {Array} modifiers2
+     * @returns {boolean}
+     */
+    function _modifiersMatch(modifiers1, modifiers2) {
+        return modifiers1.sort().join(',') === modifiers2.sort().join(',');
+    }
+
+    /**
+     * resets all sequence counters except for the ones passed in
+     *
+     * @param {Object} do_not_reset
+     * @returns void
+     */
+    function _resetSequences(do_not_reset) {
+        do_not_reset = do_not_reset || {};
+
+        var active_sequences = false,
+            key;
+
+        for (key in _sequence_levels) {
+            if (do_not_reset[key]) {
+                active_sequences = true;
+                continue;
+            }
+            _sequence_levels[key] = 0;
+        }
+
+        if (!active_sequences) {
+            _inside_sequence = false;
+        }
+    }
+
+    /**
+     * finds all callbacks that match based on the keycode, modifiers,
+     * and action
+     *
+     * @param {string} character
+     * @param {Array} modifiers
+     * @param {string} action
+     * @param {boolean=} remove - should we remove any matches
+     * @param {string=} combination
+     * @returns {Array}
+     */
+    function _getMatches(character, modifiers, action, remove, combination) {
+        var i,
+            callback,
+            matches = [];
+
+        // if there are no events related to this keycode
+        if (!_callbacks[character]) {
+            return [];
+        }
+
+        // if a modifier key is coming up on its own we should allow it
+        if (action == 'keyup' && _isModifier(character)) {
+            modifiers = [character];
+        }
+
+        // loop through all callbacks for the key that was pressed
+        // and see if any of them match
+        for (i = 0; i < _callbacks[character].length; ++i) {
+            callback = _callbacks[character][i];
+
+            // if this is a sequence but it is not at the right level
+            // then move onto the next match
+            if (callback.seq && _sequence_levels[callback.seq] != callback.level) {
+                continue;
+            }
+
+            // if the action we are looking for doesn't match the action we got
+            // then we should keep going
+            if (action != callback.action) {
+                continue;
+            }
+
+            // if this is a keypress event that means that we need to only
+            // look at the character, otherwise check the modifiers as
+            // well
+            if (action == 'keypress' || _modifiersMatch(modifiers, callback.modifiers)) {
+
+                // remove is used so if you change your mind and call bind a
+                // second time with a new function the first one is overwritten
+                if (remove && callback.combo == combination) {
+                    _callbacks[character].splice(i, 1);
+                }
+
+                matches.push(callback);
+            }
+        }
+
+        return matches;
+    }
+
+    /**
+     * takes a key event and figures out what the modifiers are
+     *
+     * @param {Event} e
+     * @returns {Array}
+     */
+    function _eventModifiers(e) {
+        var modifiers = [];
+
+        if (e.shiftKey) {
+            modifiers.push('shift');
+        }
+
+        if (e.altKey) {
+            modifiers.push('alt');
+        }
+
+        if (e.ctrlKey) {
+            modifiers.push('ctrl');
+        }
+
+        if (e.metaKey) {
+            modifiers.push('meta');
+        }
+
+        return modifiers;
+    }
+
+    /**
+     * actually calls the callback function
+     *
+     * if your callback function returns false this will use the jquery
+     * convention - prevent default and stop propogation on the event
+     *
+     * @param {Function} callback
+     * @param {Event} e
+     * @returns void
+     */
+    function _fireCallback(callback, e) {
+        if (callback(e) === false) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            e.returnValue = false;
+            e.cancelBubble = true;
+        }
+    }
+
+    /**
+     * handles a character key event
+     *
+     * @param {string} character
+     * @param {Event} e
+     * @returns void
+     */
+    function _handleCharacter(character, e) {
+
+        // if this event should not happen stop here
+        if (_stop(e)) {
+            return;
+        }
+
+        var callbacks = _getMatches(character, _eventModifiers(e), e.type),
+            i,
+            do_not_reset = {},
+            processed_sequence_callback = false;
+
+        // loop through matching callbacks for this key event
+        for (i = 0; i < callbacks.length; ++i) {
+
+            // fire for all sequence callbacks
+            // this is because if for example you have multiple sequences
+            // bound such as "g i" and "g t" they both need to fire the
+            // callback for matching g cause otherwise you can only ever
+            // match the first one
+            if (callbacks[i].seq) {
+                processed_sequence_callback = true;
+
+                // keep a list of which sequences were matches for later
+                do_not_reset[callbacks[i].seq] = 1;
+                _fireCallback(callbacks[i].callback, e);
+                continue;
+            }
+
+            // if there were no sequence matches but we are still here
+            // that means this is a regular match so we should fire that
+            if (!processed_sequence_callback && !_inside_sequence) {
+                _fireCallback(callbacks[i].callback, e);
+            }
+        }
+
+        // if you are inside of a sequence and the key you are pressing
+        // is not a modifier key then we should reset all sequences
+        // that were not matched by this key event
+        if (e.type == _inside_sequence && !_isModifier(character)) {
+            _resetSequences(do_not_reset);
+        }
+    }
+
+    /**
+     * handles a keydown event
+     *
+     * @param {Event} e
+     * @returns void
+     */
+    function _handleKey(e) {
+
+        // normalize e.which for key events
+        // @see http://stackoverflow.com/questions/4285627/javascript-keycode-vs-charcode-utter-confusion
+        e.which = typeof e.which == "number" ? e.which : e.keyCode;
+
+        var character = _characterFromEvent(e);
+
+        // no character found then stop
+        if (!character) {
+            return;
+        }
+
+        if (e.type == 'keyup' && _ignore_next_keyup == character) {
+            _ignore_next_keyup = false;
+            return;
+        }
+
+        _handleCharacter(character, e);
+    }
+
+    /**
+     * determines if the keycode specified is a modifier key or not
+     *
+     * @param {string} key
+     * @returns {boolean}
+     */
+    function _isModifier(key) {
+        return key == 'shift' || key == 'ctrl' || key == 'alt' || key == 'meta';
+    }
+
+    /**
+     * called to set a 1 second timeout on the specified sequence
+     *
+     * this is so after each key press in the sequence you have 1 second
+     * to press the next key before you have to start over
+     *
+     * @returns void
+     */
+    function _resetSequenceTimer() {
+        clearTimeout(_reset_timer);
+        _reset_timer = setTimeout(_resetSequences, 1000);
+    }
+
+    /**
+     * reverses the map lookup so that we can look for specific keys
+     * to see what can and can't use keypress
+     *
+     * @return {Object}
+     */
+    function _getReverseMap() {
+        if (!_REVERSE_MAP) {
+            _REVERSE_MAP = {};
+            for (var key in _MAP) {
+
+                // pull out the numeric keypad from here cause keypress should
+                // be able to detect the keys from the character
+                if (key > 95 && key < 112) {
+                    continue;
+                }
+
+                if (_MAP.hasOwnProperty(key)) {
+                    _REVERSE_MAP[_MAP[key]] = key;
+                }
+            }
+        }
+        return _REVERSE_MAP;
+    }
+
+    /**
+     * picks the best action based on the key combination
+     *
+     * @param {string} key - character for key
+     * @param {Array} modifiers
+     * @param {string=} action passed in
+     */
+    function _pickBestAction(key, modifiers, action) {
+
+        // if no action was picked in we should try to pick the one
+        // that we think would work best for this key
+        if (!action) {
+            action = _getReverseMap()[key] ? 'keydown' : 'keypress';
+        }
+
+        // modifier keys don't work as expected with keypress,
+        // switch to keydown
+        if (action == 'keypress' && modifiers.length) {
+            action = 'keydown';
+        }
+
+        return action;
+    }
+
+    /**
+     * binds a key sequence to an event
+     *
+     * @param {string} combo - combo specified in bind call
+     * @param {Array} keys
+     * @param {Function} callback
+     * @param {string=} action
+     * @returns void
+     */
+    function _bindSequence(combo, keys, callback, action) {
+
+        // start off by adding a sequence level record for this combination
+        // and setting the level to 0
+        _sequence_levels[combo] = 0;
+
+        // if there is no action pick the best one for the first key
+        // in the sequence
+        if (!action) {
+            action = _pickBestAction(keys[0], []);
+        }
+
+        /**
+         * callback to increase the sequence level for this sequence and reset
+         * all other sequences that were active
+         *
+         * @param {Event} e
+         * @returns void
+         */
+        var _increaseSequence = function(e) {
+                _inside_sequence = action;
+                ++_sequence_levels[combo];
+                _resetSequenceTimer();
+            },
+
+            /**
+             * wraps the specified callback inside of another function in order
+             * to reset all sequence counters as soon as this sequence is done
+             *
+             * @param {Event} e
+             * @returns void
+             */
+            _callbackAndReset = function(e) {
+                _fireCallback(callback, e);
+
+                // we should ignore the next key up if the action is key down
+                // or keypress.  this is so if you finish a sequence and
+                // release the key the final key will not trigger a keyup
+                if (action !== 'keyup') {
+                    _ignore_next_keyup = _characterFromEvent(e);
+                }
+
+                // weird race condition if a sequence ends with the key
+                // another sequence begins with
+                setTimeout(_resetSequences, 10);
+            },
+            i;
+
+        // loop through keys one at a time and bind the appropriate callback
+        // function.  for any key leading up to the final one it should
+        // increase the sequence. after the final, it should reset all sequences
+        for (i = 0; i < keys.length; ++i) {
+            _bindSingle(keys[i], i < keys.length - 1 ? _increaseSequence : _callbackAndReset, action, combo, i);
+        }
+    }
+
+    /**
+     * binds a single keyboard combination
+     *
+     * @param {string} combination
+     * @param {Function} callback
+     * @param {string=} action
+     * @param {string=} sequence_name - name of sequence if part of sequence
+     * @param {number=} level - what part of the sequence the command is
+     * @returns void
+     */
+    function _bindSingle(combination, callback, action, sequence_name, level) {
+
+        // make sure multiple spaces in a row become a single space
+        combination = combination.replace(/\s+/g, ' ');
+
+        var sequence = combination.split(' '),
+            i,
+            key,
+            keys,
+            modifiers = [];
+
+        // if this pattern is a sequence of keys then run through this method
+        // to reprocess each pattern one key at a time
+        if (sequence.length > 1) {
+            return _bindSequence(combination, sequence, callback, action);
+        }
+
+        // take the keys from this pattern and figure out what the actual
+        // pattern is all about
+        keys = combination === '+' ? ['+'] : combination.split('+');
+
+        for (i = 0; i < keys.length; ++i) {
+            key = keys[i];
+
+            // normalize key names
+            if (_SPECIAL_ALIASES[key]) {
+                key = _SPECIAL_ALIASES[key];
+            }
+
+            // if this is not a keypress event then we should
+            // be smart about using shift keys
+            // this will only work for US keyboards however
+            if (action && action != 'keypress' && _SHIFT_MAP[key]) {
+                key = _SHIFT_MAP[key];
+                modifiers.push('shift');
+            }
+
+            // if this key is a modifier then add it to the list of modifiers
+            if (_isModifier(key)) {
+                modifiers.push(key);
+            }
+        }
+
+        // depending on what the key combination is
+        // we will try to pick the best event for it
+        action = _pickBestAction(key, modifiers, action);
+
+        // make sure to initialize array if this is the first time
+        // a callback is added for this key
+        if (!_callbacks[key]) {
+            _callbacks[key] = [];
+        }
+
+        // remove an existing match if there is one
+        _getMatches(key, modifiers, action, !sequence_name, combination);
+
+        // add this call back to the array
+        // if it is a sequence put it at the beginning
+        // if not put it at the end
+        //
+        // this is important because the way these are processed expects
+        // the sequence ones to come first
+        _callbacks[key][sequence_name ? 'unshift' : 'push']({
+            callback: callback,
+            modifiers: modifiers,
+            action: action,
+            seq: sequence_name,
+            level: level,
+            combo: combination
+        });
+    }
+
+    /**
+     * binds multiple combinations to the same callback
+     *
+     * @param {Array} combinations
+     * @param {Function} callback
+     * @param {string|undefined} action
+     * @returns void
+     */
+    function _bindMultiple(combinations, callback, action) {
+        for (var i = 0; i < combinations.length; ++i) {
+            _bindSingle(combinations[i], callback, action);
+        }
+    }
+
+    // start!
+    _addEvent(document, 'keypress', _handleKey);
+    _addEvent(document, 'keydown', _handleKey);
+    _addEvent(document, 'keyup', _handleKey);
+
+    var mousetrap = {
+
+        /**
+         * binds an event to mousetrap
+         *
+         * can be a single key, a combination of keys separated with +,
+         * a comma separated list of keys, an array of keys, or
+         * a sequence of keys separated by spaces
+         *
+         * be sure to list the modifier keys first to make sure that the
+         * correct key ends up getting bound (the last key in the pattern)
+         *
+         * @param {string|Array} keys
+         * @param {Function} callback
+         * @param {string=} action - 'keypress', 'keydown', or 'keyup'
+         * @returns void
+         */
+        bind: function(keys, callback, action) {
+            _bindMultiple(keys instanceof Array ? keys : [keys], callback, action);
+            _direct_map[keys + ':' + action] = callback;
+            return this;
+        },
+
+        /**
+         * unbinds an event to mousetrap
+         *
+         * the unbinding sets the callback function of the specified key combo
+         * to an empty function and deletes the corresponding key in the
+         * _direct_map dict.
+         *
+         * the keycombo+action has to be exactly the same as
+         * it was defined in the bind method
+         *
+         * TODO: actually remove this from the _callbacks dictionary instead
+         * of binding an empty function
+         *
+         * @param {string|Array} keys
+         * @param {string} action
+         * @returns void
+         */
+        unbind: function(keys, action) {
+            if (_direct_map[keys + ':' + action]) {
+                delete _direct_map[keys + ':' + action];
+                this.bind(keys, function() {}, action);
+            }
+            return this;
+        },
+
+        /**
+         * triggers an event that has already been bound
+         *
+         * @param {string} keys
+         * @param {string=} action
+         * @returns void
+         */
+        trigger: function(keys, action) {
+            _direct_map[keys + ':' + action]();
+            return this;
+        },
+
+        /**
+         * resets the library back to its initial state.  this is useful
+         * if you want to clear out the current keyboard shortcuts and bind
+         * new ones - for example if you switch to another page
+         *
+         * @returns void
+         */
+        reset: function() {
+            _callbacks = {};
+            _direct_map = {};
+            return this;
+        }
+    };
+
+  module.exports = mousetrap;
+
+
 
 /***/ },
 /* 50 */
@@ -27256,560 +27326,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
-  var util = __webpack_require__(1);
-
-  /**
-   * Creation of the SectorMixin var.
-   *
-   * This contains all the functions the Network object can use to employ the sector system.
-   * The sector system is always used by Network, though the benefits only apply to the use of clustering.
-   * If clustering is not used, there is no overhead except for a duplicate object with references to nodes and edges.
-   */
-
-  /**
-   * This function is only called by the setData function of the Network object.
-   * This loads the global references into the active sector. This initializes the sector.
-   *
-   * @private
-   */
-  exports._putDataInSector = function() {
-    this.sectors["active"][this._sector()].nodes = this.nodes;
-    this.sectors["active"][this._sector()].edges = this.edges;
-    this.sectors["active"][this._sector()].nodeIndices = this.nodeIndices;
-  };
-
-
-  /**
-   *  /**
-   * This function sets the global references to nodes, edges and nodeIndices back to
-   * those of the supplied (active) sector. If a type is defined, do the specific type
-   *
-   * @param {String} sectorId
-   * @param {String} [sectorType] | "active" or "frozen"
-   * @private
-   */
-  exports._switchToSector = function(sectorId, sectorType) {
-    if (sectorType === undefined || sectorType == "active") {
-      this._switchToActiveSector(sectorId);
-    }
-    else {
-      this._switchToFrozenSector(sectorId);
-    }
-  };
-
-
-  /**
-   * This function sets the global references to nodes, edges and nodeIndices back to
-   * those of the supplied active sector.
-   *
-   * @param sectorId
-   * @private
-   */
-  exports._switchToActiveSector = function(sectorId) {
-    this.nodeIndices = this.sectors["active"][sectorId]["nodeIndices"];
-    this.nodes       = this.sectors["active"][sectorId]["nodes"];
-    this.edges       = this.sectors["active"][sectorId]["edges"];
-  };
-
-
-  /**
-   * This function sets the global references to nodes, edges and nodeIndices back to
-   * those of the supplied active sector.
-   *
-   * @private
-   */
-  exports._switchToSupportSector = function() {
-    this.nodeIndices = this.sectors["support"]["nodeIndices"];
-    this.nodes       = this.sectors["support"]["nodes"];
-    this.edges       = this.sectors["support"]["edges"];
-  };
-
-
-  /**
-   * This function sets the global references to nodes, edges and nodeIndices back to
-   * those of the supplied frozen sector.
-   *
-   * @param sectorId
-   * @private
-   */
-  exports._switchToFrozenSector = function(sectorId) {
-    this.nodeIndices = this.sectors["frozen"][sectorId]["nodeIndices"];
-    this.nodes       = this.sectors["frozen"][sectorId]["nodes"];
-    this.edges       = this.sectors["frozen"][sectorId]["edges"];
-  };
-
-
-  /**
-   * This function sets the global references to nodes, edges and nodeIndices back to
-   * those of the currently active sector.
-   *
-   * @private
-   */
-  exports._loadLatestSector = function() {
-    this._switchToSector(this._sector());
-  };
-
-
-  /**
-   * This function returns the currently active sector Id
-   *
-   * @returns {String}
-   * @private
-   */
-  exports._sector = function() {
-    return this.activeSector[this.activeSector.length-1];
-  };
-
-
-  /**
-   * This function returns the previously active sector Id
-   *
-   * @returns {String}
-   * @private
-   */
-  exports._previousSector = function() {
-    if (this.activeSector.length > 1) {
-      return this.activeSector[this.activeSector.length-2];
-    }
-    else {
-      throw new TypeError('there are not enough sectors in the this.activeSector array.');
-    }
-  };
-
-
-  /**
-   * We add the active sector at the end of the this.activeSector array
-   * This ensures it is the currently active sector returned by _sector() and it reaches the top
-   * of the activeSector stack. When we reverse our steps we move from the end to the beginning of this stack.
-   *
-   * @param newId
-   * @private
-   */
-  exports._setActiveSector = function(newId) {
-    this.activeSector.push(newId);
-  };
-
-
-  /**
-   * We remove the currently active sector id from the active sector stack. This happens when
-   * we reactivate the previously active sector
-   *
-   * @private
-   */
-  exports._forgetLastSector = function() {
-    this.activeSector.pop();
-  };
-
-
-  /**
-   * This function creates a new active sector with the supplied newId. This newId
-   * is the expanding node id.
-   *
-   * @param {String} newId   | Id of the new active sector
-   * @private
-   */
-  exports._createNewSector = function(newId) {
-    // create the new sector
-    this.sectors["active"][newId] = {"nodes":{},
-                                     "edges":{},
-                                     "nodeIndices":[],
-                                     "formationScale": this.scale,
-                                     "drawingNode": undefined};
-
-    // create the new sector render node. This gives visual feedback that you are in a new sector.
-    this.sectors["active"][newId]['drawingNode'] = new Node(
-        {id:newId,
-          color: {
-            background: "#eaefef",
-            border: "495c5e"
-          }
-        },{},{},this.constants);
-    this.sectors["active"][newId]['drawingNode'].clusterSize = 2;
-  };
-
-
-  /**
-   * This function removes the currently active sector. This is called when we create a new
-   * active sector.
-   *
-   * @param {String} sectorId   | Id of the active sector that will be removed
-   * @private
-   */
-  exports._deleteActiveSector = function(sectorId) {
-    delete this.sectors["active"][sectorId];
-  };
-
-
-  /**
-   * This function removes the currently active sector. This is called when we reactivate
-   * the previously active sector.
-   *
-   * @param {String} sectorId   | Id of the active sector that will be removed
-   * @private
-   */
-  exports._deleteFrozenSector = function(sectorId) {
-    delete this.sectors["frozen"][sectorId];
-  };
-
-
-  /**
-   * Freezing an active sector means moving it from the "active" object to the "frozen" object.
-   * We copy the references, then delete the active entree.
-   *
-   * @param sectorId
-   * @private
-   */
-  exports._freezeSector = function(sectorId) {
-    // we move the set references from the active to the frozen stack.
-    this.sectors["frozen"][sectorId] = this.sectors["active"][sectorId];
-
-    // we have moved the sector data into the frozen set, we now remove it from the active set
-    this._deleteActiveSector(sectorId);
-  };
-
-
-  /**
-   * This is the reverse operation of _freezeSector. Activating means moving the sector from the "frozen"
-   * object to the "active" object.
-   *
-   * @param sectorId
-   * @private
-   */
-  exports._activateSector = function(sectorId) {
-    // we move the set references from the frozen to the active stack.
-    this.sectors["active"][sectorId] = this.sectors["frozen"][sectorId];
-
-    // we have moved the sector data into the active set, we now remove it from the frozen stack
-    this._deleteFrozenSector(sectorId);
-  };
-
-
-  /**
-   * This function merges the data from the currently active sector with a frozen sector. This is used
-   * in the process of reverting back to the previously active sector.
-   * The data that is placed in the frozen (the previously active) sector is the node that has been removed from it
-   * upon the creation of a new active sector.
-   *
-   * @param sectorId
-   * @private
-   */
-  exports._mergeThisWithFrozen = function(sectorId) {
-    // copy all nodes
-    for (var nodeId in this.nodes) {
-      if (this.nodes.hasOwnProperty(nodeId)) {
-        this.sectors["frozen"][sectorId]["nodes"][nodeId] = this.nodes[nodeId];
-      }
-    }
-
-    // copy all edges (if not fully clustered, else there are no edges)
-    for (var edgeId in this.edges) {
-      if (this.edges.hasOwnProperty(edgeId)) {
-        this.sectors["frozen"][sectorId]["edges"][edgeId] = this.edges[edgeId];
-      }
-    }
-
-    // merge the nodeIndices
-    for (var i = 0; i < this.nodeIndices.length; i++) {
-      this.sectors["frozen"][sectorId]["nodeIndices"].push(this.nodeIndices[i]);
-    }
-  };
-
-
-  /**
-   * This clusters the sector to one cluster. It was a single cluster before this process started so
-   * we revert to that state. The clusterToFit function with a maximum size of 1 node does this.
-   *
-   * @private
-   */
-  exports._collapseThisToSingleCluster = function() {
-    this.clusterToFit(1,false);
-  };
-
-
-  /**
-   * We create a new active sector from the node that we want to open.
-   *
-   * @param node
-   * @private
-   */
-  exports._addSector = function(node) {
-    // this is the currently active sector
-    var sector = this._sector();
-
-  //    // this should allow me to select nodes from a frozen set.
-  //    if (this.sectors['active'][sector]["nodes"].hasOwnProperty(node.id)) {
-  //      console.log("the node is part of the active sector");
-  //    }
-  //    else {
-  //      console.log("I dont know what the fuck happened!!");
-  //    }
-
-    // when we switch to a new sector, we remove the node that will be expanded from the current nodes list.
-    delete this.nodes[node.id];
-
-    var unqiueIdentifier = util.randomUUID();
-
-    // we fully freeze the currently active sector
-    this._freezeSector(sector);
-
-    // we create a new active sector. This sector has the Id of the node to ensure uniqueness
-    this._createNewSector(unqiueIdentifier);
-
-    // we add the active sector to the sectors array to be able to revert these steps later on
-    this._setActiveSector(unqiueIdentifier);
-
-    // we redirect the global references to the new sector's references. this._sector() now returns unqiueIdentifier
-    this._switchToSector(this._sector());
-
-    // finally we add the node we removed from our previous active sector to the new active sector
-    this.nodes[node.id] = node;
-  };
-
-
-  /**
-   * We close the sector that is currently open and revert back to the one before.
-   * If the active sector is the "default" sector, nothing happens.
-   *
-   * @private
-   */
-  exports._collapseSector = function() {
-    // the currently active sector
-    var sector = this._sector();
-
-    // we cannot collapse the default sector
-    if (sector != "default") {
-      if ((this.nodeIndices.length == 1) ||
-       (this.sectors["active"][sector]["drawingNode"].width*this.scale < this.constants.clustering.screenSizeThreshold * this.frame.canvas.clientWidth) ||
-       (this.sectors["active"][sector]["drawingNode"].height*this.scale < this.constants.clustering.screenSizeThreshold * this.frame.canvas.clientHeight)) {
-        var previousSector = this._previousSector();
-
-        // we collapse the sector back to a single cluster
-        this._collapseThisToSingleCluster();
-
-        // we move the remaining nodes, edges and nodeIndices to the previous sector.
-        // This previous sector is the one we will reactivate
-        this._mergeThisWithFrozen(previousSector);
-
-        // the previously active (frozen) sector now has all the data from the currently active sector.
-        // we can now delete the active sector.
-        this._deleteActiveSector(sector);
-
-        // we activate the previously active (and currently frozen) sector.
-        this._activateSector(previousSector);
-
-        // we load the references from the newly active sector into the global references
-        this._switchToSector(previousSector);
-
-        // we forget the previously active sector because we reverted to the one before
-        this._forgetLastSector();
-
-        // finally, we update the node index list.
-        this._updateNodeIndexList();
-
-        // we refresh the list with calulation nodes and calculation node indices.
-        this._updateCalculationNodes();
-      }
-    }
-  };
-
-
-  /**
-   * This runs a function in all active sectors. This is used in _redraw() and the _initializeForceCalculation().
-   *
-   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
-   *                              |   we dont pass the function itself because then the "this" is the window object
-   *                              |   instead of the Network object
-   * @param {*} [argument]            |   Optional: arguments to pass to the runFunction
-   * @private
-   */
-  exports._doInAllActiveSectors = function(runFunction,argument) {
-    if (argument === undefined) {
-      for (var sector in this.sectors["active"]) {
-        if (this.sectors["active"].hasOwnProperty(sector)) {
-          // switch the global references to those of this sector
-          this._switchToActiveSector(sector);
-          this[runFunction]();
-        }
-      }
-    }
-    else {
-      for (var sector in this.sectors["active"]) {
-        if (this.sectors["active"].hasOwnProperty(sector)) {
-          // switch the global references to those of this sector
-          this._switchToActiveSector(sector);
-          var args = Array.prototype.splice.call(arguments, 1);
-          if (args.length > 1) {
-            this[runFunction](args[0],args[1]);
-          }
-          else {
-            this[runFunction](argument);
-          }
-        }
-      }
-    }
-    // we revert the global references back to our active sector
-    this._loadLatestSector();
-  };
-
-
-  /**
-   * This runs a function in all active sectors. This is used in _redraw() and the _initializeForceCalculation().
-   *
-   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
-   *                              |   we dont pass the function itself because then the "this" is the window object
-   *                              |   instead of the Network object
-   * @param {*} [argument]        |   Optional: arguments to pass to the runFunction
-   * @private
-   */
-  exports._doInSupportSector = function(runFunction,argument) {
-    if (argument === undefined) {
-      this._switchToSupportSector();
-      this[runFunction]();
-    }
-    else {
-      this._switchToSupportSector();
-      var args = Array.prototype.splice.call(arguments, 1);
-      if (args.length > 1) {
-        this[runFunction](args[0],args[1]);
-      }
-      else {
-        this[runFunction](argument);
-      }
-    }
-    // we revert the global references back to our active sector
-    this._loadLatestSector();
-  };
-
-
-  /**
-   * This runs a function in all frozen sectors. This is used in the _redraw().
-   *
-   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
-   *                              |   we don't pass the function itself because then the "this" is the window object
-   *                              |   instead of the Network object
-   * @param {*} [argument]            |   Optional: arguments to pass to the runFunction
-   * @private
-   */
-  exports._doInAllFrozenSectors = function(runFunction,argument) {
-    if (argument === undefined) {
-      for (var sector in this.sectors["frozen"]) {
-        if (this.sectors["frozen"].hasOwnProperty(sector)) {
-          // switch the global references to those of this sector
-          this._switchToFrozenSector(sector);
-          this[runFunction]();
-        }
-      }
-    }
-    else {
-      for (var sector in this.sectors["frozen"]) {
-        if (this.sectors["frozen"].hasOwnProperty(sector)) {
-          // switch the global references to those of this sector
-          this._switchToFrozenSector(sector);
-          var args = Array.prototype.splice.call(arguments, 1);
-          if (args.length > 1) {
-            this[runFunction](args[0],args[1]);
-          }
-          else {
-            this[runFunction](argument);
-          }
-        }
-      }
-    }
-    this._loadLatestSector();
-  };
-
-
-  /**
-   * This runs a function in all sectors. This is used in the _redraw().
-   *
-   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
-   *                              |   we don't pass the function itself because then the "this" is the window object
-   *                              |   instead of the Network object
-   * @param {*} [argument]        |   Optional: arguments to pass to the runFunction
-   * @private
-   */
-  exports._doInAllSectors = function(runFunction,argument) {
-    var args = Array.prototype.splice.call(arguments, 1);
-    if (argument === undefined) {
-      this._doInAllActiveSectors(runFunction);
-      this._doInAllFrozenSectors(runFunction);
-    }
-    else {
-      if (args.length > 1) {
-        this._doInAllActiveSectors(runFunction,args[0],args[1]);
-        this._doInAllFrozenSectors(runFunction,args[0],args[1]);
-      }
-      else {
-        this._doInAllActiveSectors(runFunction,argument);
-        this._doInAllFrozenSectors(runFunction,argument);
-      }
-    }
-  };
-
-
-  /**
-   * This clears the nodeIndices list. We cannot use this.nodeIndices = [] because we would break the link with the
-   * active sector. Thus we clear the nodeIndices in the active sector, then reconnect the this.nodeIndices to it.
-   *
-   * @private
-   */
-  exports._clearNodeIndexList = function() {
-    var sector = this._sector();
-    this.sectors["active"][sector]["nodeIndices"] = [];
-    this.nodeIndices = this.sectors["active"][sector]["nodeIndices"];
-  };
-
-
-  /**
-   * Draw the encompassing sector node
-   *
-   * @param ctx
-   * @param sectorType
-   * @private
-   */
-  exports._drawSectorNodes = function(ctx,sectorType) {
-    var minY = 1e9, maxY = -1e9, minX = 1e9, maxX = -1e9, node;
-    for (var sector in this.sectors[sectorType]) {
-      if (this.sectors[sectorType].hasOwnProperty(sector)) {
-        if (this.sectors[sectorType][sector]["drawingNode"] !== undefined) {
-
-          this._switchToSector(sector,sectorType);
-
-          minY = 1e9; maxY = -1e9; minX = 1e9; maxX = -1e9;
-          for (var nodeId in this.nodes) {
-            if (this.nodes.hasOwnProperty(nodeId)) {
-              node = this.nodes[nodeId];
-              node.resize(ctx);
-              if (minX > node.x - 0.5 * node.width) {minX = node.x - 0.5 * node.width;}
-              if (maxX < node.x + 0.5 * node.width) {maxX = node.x + 0.5 * node.width;}
-              if (minY > node.y - 0.5 * node.height) {minY = node.y - 0.5 * node.height;}
-              if (maxY < node.y + 0.5 * node.height) {maxY = node.y + 0.5 * node.height;}
-            }
-          }
-          node = this.sectors[sectorType][sector]["drawingNode"];
-          node.x = 0.5 * (maxX + minX);
-          node.y = 0.5 * (maxY + minY);
-          node.width = 2 * (node.x - minX);
-          node.height = 2 * (node.y - minY);
-          node.radius = Math.sqrt(Math.pow(0.5*node.width,2) + Math.pow(0.5*node.height,2));
-          node.setScale(this.scale);
-          node._drawCircle(ctx);
-        }
-      }
-    }
-  };
-
-  exports._drawAllSectorNodes = function(ctx) {
-    this._drawSectorNodes(ctx,"frozen");
-    this._drawSectorNodes(ctx,"active");
-    this._loadLatestSector();
-  };
-
-
-/***/ },
-/* 52 */
-/***/ function(module, exports, __webpack_require__) {
-
   var Node = __webpack_require__(36);
 
   /**
@@ -28514,6 +28030,560 @@ return /******/ (function(modules) { // webpackBootstrap
         }
       }
     }
+  };
+
+
+/***/ },
+/* 52 */
+/***/ function(module, exports, __webpack_require__) {
+
+  var util = __webpack_require__(1);
+
+  /**
+   * Creation of the SectorMixin var.
+   *
+   * This contains all the functions the Network object can use to employ the sector system.
+   * The sector system is always used by Network, though the benefits only apply to the use of clustering.
+   * If clustering is not used, there is no overhead except for a duplicate object with references to nodes and edges.
+   */
+
+  /**
+   * This function is only called by the setData function of the Network object.
+   * This loads the global references into the active sector. This initializes the sector.
+   *
+   * @private
+   */
+  exports._putDataInSector = function() {
+    this.sectors["active"][this._sector()].nodes = this.nodes;
+    this.sectors["active"][this._sector()].edges = this.edges;
+    this.sectors["active"][this._sector()].nodeIndices = this.nodeIndices;
+  };
+
+
+  /**
+   *  /**
+   * This function sets the global references to nodes, edges and nodeIndices back to
+   * those of the supplied (active) sector. If a type is defined, do the specific type
+   *
+   * @param {String} sectorId
+   * @param {String} [sectorType] | "active" or "frozen"
+   * @private
+   */
+  exports._switchToSector = function(sectorId, sectorType) {
+    if (sectorType === undefined || sectorType == "active") {
+      this._switchToActiveSector(sectorId);
+    }
+    else {
+      this._switchToFrozenSector(sectorId);
+    }
+  };
+
+
+  /**
+   * This function sets the global references to nodes, edges and nodeIndices back to
+   * those of the supplied active sector.
+   *
+   * @param sectorId
+   * @private
+   */
+  exports._switchToActiveSector = function(sectorId) {
+    this.nodeIndices = this.sectors["active"][sectorId]["nodeIndices"];
+    this.nodes       = this.sectors["active"][sectorId]["nodes"];
+    this.edges       = this.sectors["active"][sectorId]["edges"];
+  };
+
+
+  /**
+   * This function sets the global references to nodes, edges and nodeIndices back to
+   * those of the supplied active sector.
+   *
+   * @private
+   */
+  exports._switchToSupportSector = function() {
+    this.nodeIndices = this.sectors["support"]["nodeIndices"];
+    this.nodes       = this.sectors["support"]["nodes"];
+    this.edges       = this.sectors["support"]["edges"];
+  };
+
+
+  /**
+   * This function sets the global references to nodes, edges and nodeIndices back to
+   * those of the supplied frozen sector.
+   *
+   * @param sectorId
+   * @private
+   */
+  exports._switchToFrozenSector = function(sectorId) {
+    this.nodeIndices = this.sectors["frozen"][sectorId]["nodeIndices"];
+    this.nodes       = this.sectors["frozen"][sectorId]["nodes"];
+    this.edges       = this.sectors["frozen"][sectorId]["edges"];
+  };
+
+
+  /**
+   * This function sets the global references to nodes, edges and nodeIndices back to
+   * those of the currently active sector.
+   *
+   * @private
+   */
+  exports._loadLatestSector = function() {
+    this._switchToSector(this._sector());
+  };
+
+
+  /**
+   * This function returns the currently active sector Id
+   *
+   * @returns {String}
+   * @private
+   */
+  exports._sector = function() {
+    return this.activeSector[this.activeSector.length-1];
+  };
+
+
+  /**
+   * This function returns the previously active sector Id
+   *
+   * @returns {String}
+   * @private
+   */
+  exports._previousSector = function() {
+    if (this.activeSector.length > 1) {
+      return this.activeSector[this.activeSector.length-2];
+    }
+    else {
+      throw new TypeError('there are not enough sectors in the this.activeSector array.');
+    }
+  };
+
+
+  /**
+   * We add the active sector at the end of the this.activeSector array
+   * This ensures it is the currently active sector returned by _sector() and it reaches the top
+   * of the activeSector stack. When we reverse our steps we move from the end to the beginning of this stack.
+   *
+   * @param newId
+   * @private
+   */
+  exports._setActiveSector = function(newId) {
+    this.activeSector.push(newId);
+  };
+
+
+  /**
+   * We remove the currently active sector id from the active sector stack. This happens when
+   * we reactivate the previously active sector
+   *
+   * @private
+   */
+  exports._forgetLastSector = function() {
+    this.activeSector.pop();
+  };
+
+
+  /**
+   * This function creates a new active sector with the supplied newId. This newId
+   * is the expanding node id.
+   *
+   * @param {String} newId   | Id of the new active sector
+   * @private
+   */
+  exports._createNewSector = function(newId) {
+    // create the new sector
+    this.sectors["active"][newId] = {"nodes":{},
+                                     "edges":{},
+                                     "nodeIndices":[],
+                                     "formationScale": this.scale,
+                                     "drawingNode": undefined};
+
+    // create the new sector render node. This gives visual feedback that you are in a new sector.
+    this.sectors["active"][newId]['drawingNode'] = new Node(
+        {id:newId,
+          color: {
+            background: "#eaefef",
+            border: "495c5e"
+          }
+        },{},{},this.constants);
+    this.sectors["active"][newId]['drawingNode'].clusterSize = 2;
+  };
+
+
+  /**
+   * This function removes the currently active sector. This is called when we create a new
+   * active sector.
+   *
+   * @param {String} sectorId   | Id of the active sector that will be removed
+   * @private
+   */
+  exports._deleteActiveSector = function(sectorId) {
+    delete this.sectors["active"][sectorId];
+  };
+
+
+  /**
+   * This function removes the currently active sector. This is called when we reactivate
+   * the previously active sector.
+   *
+   * @param {String} sectorId   | Id of the active sector that will be removed
+   * @private
+   */
+  exports._deleteFrozenSector = function(sectorId) {
+    delete this.sectors["frozen"][sectorId];
+  };
+
+
+  /**
+   * Freezing an active sector means moving it from the "active" object to the "frozen" object.
+   * We copy the references, then delete the active entree.
+   *
+   * @param sectorId
+   * @private
+   */
+  exports._freezeSector = function(sectorId) {
+    // we move the set references from the active to the frozen stack.
+    this.sectors["frozen"][sectorId] = this.sectors["active"][sectorId];
+
+    // we have moved the sector data into the frozen set, we now remove it from the active set
+    this._deleteActiveSector(sectorId);
+  };
+
+
+  /**
+   * This is the reverse operation of _freezeSector. Activating means moving the sector from the "frozen"
+   * object to the "active" object.
+   *
+   * @param sectorId
+   * @private
+   */
+  exports._activateSector = function(sectorId) {
+    // we move the set references from the frozen to the active stack.
+    this.sectors["active"][sectorId] = this.sectors["frozen"][sectorId];
+
+    // we have moved the sector data into the active set, we now remove it from the frozen stack
+    this._deleteFrozenSector(sectorId);
+  };
+
+
+  /**
+   * This function merges the data from the currently active sector with a frozen sector. This is used
+   * in the process of reverting back to the previously active sector.
+   * The data that is placed in the frozen (the previously active) sector is the node that has been removed from it
+   * upon the creation of a new active sector.
+   *
+   * @param sectorId
+   * @private
+   */
+  exports._mergeThisWithFrozen = function(sectorId) {
+    // copy all nodes
+    for (var nodeId in this.nodes) {
+      if (this.nodes.hasOwnProperty(nodeId)) {
+        this.sectors["frozen"][sectorId]["nodes"][nodeId] = this.nodes[nodeId];
+      }
+    }
+
+    // copy all edges (if not fully clustered, else there are no edges)
+    for (var edgeId in this.edges) {
+      if (this.edges.hasOwnProperty(edgeId)) {
+        this.sectors["frozen"][sectorId]["edges"][edgeId] = this.edges[edgeId];
+      }
+    }
+
+    // merge the nodeIndices
+    for (var i = 0; i < this.nodeIndices.length; i++) {
+      this.sectors["frozen"][sectorId]["nodeIndices"].push(this.nodeIndices[i]);
+    }
+  };
+
+
+  /**
+   * This clusters the sector to one cluster. It was a single cluster before this process started so
+   * we revert to that state. The clusterToFit function with a maximum size of 1 node does this.
+   *
+   * @private
+   */
+  exports._collapseThisToSingleCluster = function() {
+    this.clusterToFit(1,false);
+  };
+
+
+  /**
+   * We create a new active sector from the node that we want to open.
+   *
+   * @param node
+   * @private
+   */
+  exports._addSector = function(node) {
+    // this is the currently active sector
+    var sector = this._sector();
+
+  //    // this should allow me to select nodes from a frozen set.
+  //    if (this.sectors['active'][sector]["nodes"].hasOwnProperty(node.id)) {
+  //      console.log("the node is part of the active sector");
+  //    }
+  //    else {
+  //      console.log("I dont know what the fuck happened!!");
+  //    }
+
+    // when we switch to a new sector, we remove the node that will be expanded from the current nodes list.
+    delete this.nodes[node.id];
+
+    var unqiueIdentifier = util.randomUUID();
+
+    // we fully freeze the currently active sector
+    this._freezeSector(sector);
+
+    // we create a new active sector. This sector has the Id of the node to ensure uniqueness
+    this._createNewSector(unqiueIdentifier);
+
+    // we add the active sector to the sectors array to be able to revert these steps later on
+    this._setActiveSector(unqiueIdentifier);
+
+    // we redirect the global references to the new sector's references. this._sector() now returns unqiueIdentifier
+    this._switchToSector(this._sector());
+
+    // finally we add the node we removed from our previous active sector to the new active sector
+    this.nodes[node.id] = node;
+  };
+
+
+  /**
+   * We close the sector that is currently open and revert back to the one before.
+   * If the active sector is the "default" sector, nothing happens.
+   *
+   * @private
+   */
+  exports._collapseSector = function() {
+    // the currently active sector
+    var sector = this._sector();
+
+    // we cannot collapse the default sector
+    if (sector != "default") {
+      if ((this.nodeIndices.length == 1) ||
+       (this.sectors["active"][sector]["drawingNode"].width*this.scale < this.constants.clustering.screenSizeThreshold * this.frame.canvas.clientWidth) ||
+       (this.sectors["active"][sector]["drawingNode"].height*this.scale < this.constants.clustering.screenSizeThreshold * this.frame.canvas.clientHeight)) {
+        var previousSector = this._previousSector();
+
+        // we collapse the sector back to a single cluster
+        this._collapseThisToSingleCluster();
+
+        // we move the remaining nodes, edges and nodeIndices to the previous sector.
+        // This previous sector is the one we will reactivate
+        this._mergeThisWithFrozen(previousSector);
+
+        // the previously active (frozen) sector now has all the data from the currently active sector.
+        // we can now delete the active sector.
+        this._deleteActiveSector(sector);
+
+        // we activate the previously active (and currently frozen) sector.
+        this._activateSector(previousSector);
+
+        // we load the references from the newly active sector into the global references
+        this._switchToSector(previousSector);
+
+        // we forget the previously active sector because we reverted to the one before
+        this._forgetLastSector();
+
+        // finally, we update the node index list.
+        this._updateNodeIndexList();
+
+        // we refresh the list with calulation nodes and calculation node indices.
+        this._updateCalculationNodes();
+      }
+    }
+  };
+
+
+  /**
+   * This runs a function in all active sectors. This is used in _redraw() and the _initializeForceCalculation().
+   *
+   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
+   *                              |   we dont pass the function itself because then the "this" is the window object
+   *                              |   instead of the Network object
+   * @param {*} [argument]            |   Optional: arguments to pass to the runFunction
+   * @private
+   */
+  exports._doInAllActiveSectors = function(runFunction,argument) {
+    if (argument === undefined) {
+      for (var sector in this.sectors["active"]) {
+        if (this.sectors["active"].hasOwnProperty(sector)) {
+          // switch the global references to those of this sector
+          this._switchToActiveSector(sector);
+          this[runFunction]();
+        }
+      }
+    }
+    else {
+      for (var sector in this.sectors["active"]) {
+        if (this.sectors["active"].hasOwnProperty(sector)) {
+          // switch the global references to those of this sector
+          this._switchToActiveSector(sector);
+          var args = Array.prototype.splice.call(arguments, 1);
+          if (args.length > 1) {
+            this[runFunction](args[0],args[1]);
+          }
+          else {
+            this[runFunction](argument);
+          }
+        }
+      }
+    }
+    // we revert the global references back to our active sector
+    this._loadLatestSector();
+  };
+
+
+  /**
+   * This runs a function in all active sectors. This is used in _redraw() and the _initializeForceCalculation().
+   *
+   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
+   *                              |   we dont pass the function itself because then the "this" is the window object
+   *                              |   instead of the Network object
+   * @param {*} [argument]        |   Optional: arguments to pass to the runFunction
+   * @private
+   */
+  exports._doInSupportSector = function(runFunction,argument) {
+    if (argument === undefined) {
+      this._switchToSupportSector();
+      this[runFunction]();
+    }
+    else {
+      this._switchToSupportSector();
+      var args = Array.prototype.splice.call(arguments, 1);
+      if (args.length > 1) {
+        this[runFunction](args[0],args[1]);
+      }
+      else {
+        this[runFunction](argument);
+      }
+    }
+    // we revert the global references back to our active sector
+    this._loadLatestSector();
+  };
+
+
+  /**
+   * This runs a function in all frozen sectors. This is used in the _redraw().
+   *
+   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
+   *                              |   we don't pass the function itself because then the "this" is the window object
+   *                              |   instead of the Network object
+   * @param {*} [argument]            |   Optional: arguments to pass to the runFunction
+   * @private
+   */
+  exports._doInAllFrozenSectors = function(runFunction,argument) {
+    if (argument === undefined) {
+      for (var sector in this.sectors["frozen"]) {
+        if (this.sectors["frozen"].hasOwnProperty(sector)) {
+          // switch the global references to those of this sector
+          this._switchToFrozenSector(sector);
+          this[runFunction]();
+        }
+      }
+    }
+    else {
+      for (var sector in this.sectors["frozen"]) {
+        if (this.sectors["frozen"].hasOwnProperty(sector)) {
+          // switch the global references to those of this sector
+          this._switchToFrozenSector(sector);
+          var args = Array.prototype.splice.call(arguments, 1);
+          if (args.length > 1) {
+            this[runFunction](args[0],args[1]);
+          }
+          else {
+            this[runFunction](argument);
+          }
+        }
+      }
+    }
+    this._loadLatestSector();
+  };
+
+
+  /**
+   * This runs a function in all sectors. This is used in the _redraw().
+   *
+   * @param {String} runFunction  |   This is the NAME of a function we want to call in all active sectors
+   *                              |   we don't pass the function itself because then the "this" is the window object
+   *                              |   instead of the Network object
+   * @param {*} [argument]        |   Optional: arguments to pass to the runFunction
+   * @private
+   */
+  exports._doInAllSectors = function(runFunction,argument) {
+    var args = Array.prototype.splice.call(arguments, 1);
+    if (argument === undefined) {
+      this._doInAllActiveSectors(runFunction);
+      this._doInAllFrozenSectors(runFunction);
+    }
+    else {
+      if (args.length > 1) {
+        this._doInAllActiveSectors(runFunction,args[0],args[1]);
+        this._doInAllFrozenSectors(runFunction,args[0],args[1]);
+      }
+      else {
+        this._doInAllActiveSectors(runFunction,argument);
+        this._doInAllFrozenSectors(runFunction,argument);
+      }
+    }
+  };
+
+
+  /**
+   * This clears the nodeIndices list. We cannot use this.nodeIndices = [] because we would break the link with the
+   * active sector. Thus we clear the nodeIndices in the active sector, then reconnect the this.nodeIndices to it.
+   *
+   * @private
+   */
+  exports._clearNodeIndexList = function() {
+    var sector = this._sector();
+    this.sectors["active"][sector]["nodeIndices"] = [];
+    this.nodeIndices = this.sectors["active"][sector]["nodeIndices"];
+  };
+
+
+  /**
+   * Draw the encompassing sector node
+   *
+   * @param ctx
+   * @param sectorType
+   * @private
+   */
+  exports._drawSectorNodes = function(ctx,sectorType) {
+    var minY = 1e9, maxY = -1e9, minX = 1e9, maxX = -1e9, node;
+    for (var sector in this.sectors[sectorType]) {
+      if (this.sectors[sectorType].hasOwnProperty(sector)) {
+        if (this.sectors[sectorType][sector]["drawingNode"] !== undefined) {
+
+          this._switchToSector(sector,sectorType);
+
+          minY = 1e9; maxY = -1e9; minX = 1e9; maxX = -1e9;
+          for (var nodeId in this.nodes) {
+            if (this.nodes.hasOwnProperty(nodeId)) {
+              node = this.nodes[nodeId];
+              node.resize(ctx);
+              if (minX > node.x - 0.5 * node.width) {minX = node.x - 0.5 * node.width;}
+              if (maxX < node.x + 0.5 * node.width) {maxX = node.x + 0.5 * node.width;}
+              if (minY > node.y - 0.5 * node.height) {minY = node.y - 0.5 * node.height;}
+              if (maxY < node.y + 0.5 * node.height) {maxY = node.y + 0.5 * node.height;}
+            }
+          }
+          node = this.sectors[sectorType][sector]["drawingNode"];
+          node.x = 0.5 * (maxX + minX);
+          node.y = 0.5 * (maxY + minY);
+          node.width = 2 * (node.x - minX);
+          node.height = 2 * (node.y - minY);
+          node.radius = Math.sqrt(Math.pow(0.5*node.width,2) + Math.pow(0.5*node.height,2));
+          node.setScale(this.scale);
+          node._drawCircle(ctx);
+        }
+      }
+    }
+  };
+
+  exports._drawAllSectorNodes = function(ctx) {
+    this._drawSectorNodes(ctx,"frozen");
+    this._drawSectorNodes(ctx,"active");
+    this._loadLatestSector();
   };
 
 
@@ -29587,9 +29657,9 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
   var util = __webpack_require__(1);
-  var RepulsionMixin = __webpack_require__(59);
-  var HierarchialRepulsionMixin = __webpack_require__(60);
-  var BarnesHutMixin = __webpack_require__(61);
+  var RepulsionMixin = __webpack_require__(58);
+  var HierarchialRepulsionMixin = __webpack_require__(59);
+  var BarnesHutMixin = __webpack_require__(60);
 
   /**
    * Toggling barnes Hut calculation on and off.
@@ -30312,22 +30382,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 58 */
 /***/ function(module, exports, __webpack_require__) {
 
-  module.exports = function(module) {
-  	if(!module.webpackPolyfill) {
-  		module.deprecate = function() {};
-  		module.paths = [];
-  		// module.parent = undefined by default
-  		module.children = [];
-  		module.webpackPolyfill = 1;
-  	}
-  	return module;
-  }
-
-
-/***/ },
-/* 59 */
-/***/ function(module, exports, __webpack_require__) {
-
   /**
    * Calculate the forces the nodes apply on each other based on a repulsion field.
    * This field is linearly approximated.
@@ -30389,7 +30443,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 60 */
+/* 59 */
 /***/ function(module, exports, __webpack_require__) {
 
   /**
@@ -30548,7 +30602,7 @@ return /******/ (function(modules) { // webpackBootstrap
   };
 
 /***/ },
-/* 61 */
+/* 60 */
 /***/ function(module, exports, __webpack_require__) {
 
   /**
@@ -30950,6 +31004,22 @@ return /******/ (function(modules) { // webpackBootstrap
      }
      */
   };
+
+
+/***/ },
+/* 61 */
+/***/ function(module, exports, __webpack_require__) {
+
+  module.exports = function(module) {
+  	if(!module.webpackPolyfill) {
+  		module.deprecate = function() {};
+  		module.paths = [];
+  		// module.parent = undefined by default
+  		module.children = [];
+  		module.webpackPolyfill = 1;
+  	}
+  	return module;
+  }
 
 
 /***/ }

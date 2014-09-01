@@ -1,0 +1,90 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Timeline | RTL Demo</title>
+
+  <style type="text/css">
+    body, html {
+      font-family: sans-serif;
+    }
+	.vis.timeline .item.range .content {
+      overflow: visible;
+    }
+  </style>
+  
+  <script src="../../dist/vis.js"></script>
+  <link href="../../dist/vis.css" rel="stylesheet" type="text/css" />
+
+</head>
+<body>
+
+<div>
+Demo of a timeline with the data plotted right-to-left rather than the standard left-to-right.
+</div>
+
+</br>
+
+  <div id="visualization"></div>
+
+<script>
+
+  //document.addEventListener('click', function(e) {handleClick(e)}, false);
+  
+  function handleClick(e) {
+    if (e == null) { e = window.event }
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      alert("Mouse X: " + mouseX + " Mouse Y: " + mouseY);
+  }
+  
+  function getJSONString() {
+			var stringData = '[';
+			//stringData += '{"id": "0","start":"2012-02-01T12:00:00.000+00:00", "end":"2012-02-03T12:00:00.000+00:00","content":"item 0","summary": "Item 0 summary!"}';
+			stringData += '{"id": "1","start":"2012-02-02T12:00:00.000+00:00","content":"item 1: 2012-02-02T12:00:00","summary": "Item 1 summary!", "type": "point"}';
+			/*stringData += ',{"id": "2","start":"2012-03-03T12:00:00.000+00:00","content":"item 2: 2012-03-03T12:00:00","summary": "Item 2 summary!"}';
+			stringData += ',{"id": "3","start":"2012-04-30T12:00:00.000+00:00","content":"item 3: 2012-04-30T12:00:00","summary": "Item 3 summary!"}';
+			stringData += ',{"id": "4","start":"2012-05-31T12:00:00.000+00:00","content":"item 4: 2012-05-31T12:00:00","summary": "Item 4 summary!"}';
+			stringData += ',{"id": "5","start":"2012-06-30T12:00:00.000+00:00","content":"item 5: 2012-06-30T12:00:00","summary": "Item 5 summary!"}';
+			stringData += ',{"id": "6","start":"2012-07-31T12:00:00.000+00:00","content":"item 6"}';*/
+			stringData += ']';
+			return stringData;
+		};
+
+  // create a dataset with items  
+  var items = new vis.DataSet(JSON.parse(getJSONString()));
+  
+  var container = document.getElementById('visualization');
+  
+  var options = {
+    editable: true,
+	horizontalOrientation: 'rtl',
+	align: 'centre',
+    //maxHeight: 300,
+    height: 200,
+    //zoomMin: 1000 * 60 * 60,            // 1 hour
+    zoomMax: 1000 * 60 * 60 * 24 * 30 * 12    // 6 months
+  };
+  
+  var timeline = new vis.Timeline(container, items, options);
+
+  timeline.on('select', function (selection) {
+    console.log('select', selection);
+  });
+
+  /*
+  timeline.on('rangechange', function (range) {
+    console.log('rangechange', range);
+  });
+  timeline.on('rangechanged', function (range) {
+    console.log('rangechanged', range);
+  });
+  */
+
+  items.on('add',    console.log.bind(console));
+  items.on('update', console.log.bind(console));
+  items.on('remove', console.log.bind(console));
+
+</script>
+</body>
+</html>

@@ -9579,7 +9579,7 @@ return /******/ (function(modules) { // webpackBootstrap
   var ItemBox = __webpack_require__(29);
   var ItemPoint = __webpack_require__(30);
   var ItemRange = __webpack_require__(31);
-
+  var locales = __webpack_require__(44);
 
   var UNGROUPED = '__ungrouped__'; // reserved group id for ungrouped items
 
@@ -9601,6 +9601,8 @@ return /******/ (function(modules) { // webpackBootstrap
       align: 'auto', // alignment of box items
       stack: true,
       groupOrder: null,
+      locales: locales,
+      locale: 'en',
 
       selectable: true,
       editable: {
@@ -9831,7 +9833,7 @@ return /******/ (function(modules) { // webpackBootstrap
   ItemSet.prototype.setOptions = function(options) {
     if (options) {
       // copy all options that we know
-      var fields = ['type', 'align', 'orientation', 'horizontalOrientation', 'padding', 'stack', 'selectable', 'groupOrder'];
+      var fields = ['type', 'align', 'orientation', 'horizontalOrientation', 'padding', 'stack', 'selectable', 'groupOrder', 'locale', 'locales'];
       util.selectiveExtend(fields, this.options, options);
 
       if ('margin' in options) {
@@ -10871,13 +10873,14 @@ return /******/ (function(modules) { // webpackBootstrap
       });
     }
     else {
+      var locale = this.options.locales[this.options.locale];
       // add item
       var xAbs = util.getAbsoluteLeft(this.dom.frame);
       var x = event.gesture.center.pageX - xAbs;
       var start = this.body.util.toTime(x);
       var newItem = {
         start: snap ? snap(start) : start,
-        content: 'new item'
+        content: locale.newItemContent
       };
 
       // when default type is a range, add a default end date to the new item
@@ -12948,6 +12951,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
   var Hammer = __webpack_require__(41);
+  var util = __webpack_require__(1);
+  var locales = __webpack_require__(44);
 
   /**
    * @constructor Item
@@ -12964,7 +12969,13 @@ return /******/ (function(modules) { // webpackBootstrap
     this.data = data;
     this.dom = null;
     this.conversion = conversion || {};
-    this.options = options || {};
+
+    // default options
+    this.defaultOptions = {
+      locales: locales,
+      locale: 'en'
+    };
+    this.options = util.extend(this.defaultOptions, options);
 
     this.selected = false;
     this.displayed = false;
@@ -13068,7 +13079,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
       var deleteButton = document.createElement('div');
       deleteButton.className = 'delete';
-      deleteButton.title = 'Delete this item';
+      var locale = this.options.locales[this.options.locale];
+      deleteButton.title = locale.deleteButtonTitle;
 
       Hammer(deleteButton, {
         preventDefault: true
@@ -13304,7 +13316,6 @@ return /******/ (function(modules) { // webpackBootstrap
         line.style.right = (start - this.props.line.width / 2) + 'px';
 
         // reposition dot
-        // TODO why do we need to divide by 4 here?
         dot.style.right = (start - this.props.dot.width / 2) + 'px';
     }
     else {
@@ -20369,18 +20380,34 @@ return /******/ (function(modules) { // webpackBootstrap
   // English
   exports['en'] = {
     current: 'current',
-    time: 'time'
+    custom: 'custom',
+    time: 'time',
+    deleteButtonTitle: 'Delete this item',
+    newItemContent: 'New item'
   };
   exports['en_EN'] = exports['en'];
   exports['en_US'] = exports['en'];
 
   // Dutch
   exports['nl'] = {
+    current: 'nl current',
     custom: 'aangepaste',
-    time: 'tijd'
+    time: 'tijd',
+    deleteButtonTitle: 'nl Delete this item',
+    newItemContent: 'nl New item'
   };
   exports['nl_NL'] = exports['nl'];
   exports['nl_BE'] = exports['nl'];
+
+  // Arabic
+  exports['ar'] = {
+      current: 'ar current',
+      custom: 'ar custom',
+      time: 'ar time',
+      deleteButtonTitle: 'ar Delete this item',
+      newItemContent: 'ar New item'
+  };
+  exports['ar_SA'] = exports['ar'];
 
 
 /***/ },

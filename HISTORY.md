@@ -2,6 +2,56 @@
 http://visjs.org
 
 
+## 2014-08-29, version 3.3.0
+
+### Timeline
+
+- Added localization support.
+- Implemented option `clickToUse`.
+- Implemented function `focus(id)` to center a specific item (or multiple items)
+  on screen.
+- Implemented an option `focus` for `setSelection(ids, options)`, to immediately
+  focus selected nodes.
+- Implemented function `moveTo(time, options)`.
+- Implemented animated range change for functions `fit`, `focus`, `setSelection`,
+  and `setWindow`.
+- Implemented functions `setCurrentTime(date)` and `getCurrentTime()`.
+- Implemented a new callback function `onMoving(item, callback)`.
+- Implemented support for option `align` for range items.
+- Fixed the `change` event sometimes being fired twice on IE10.
+- Fixed canceling moving an item to another group did not move the item
+  back to the original group.
+- Fixed the `change` event sometimes being fired twice on IE10.
+- Fixed canceling moving an item to another group did not move the item
+  back to the original group.
+
+### Network
+
+- A fix in reading group properties for a node.
+- Fixed physics solving stopping when a support node was not moving.
+- Implemented localization support.
+- Implemented option `clickToUse`.
+- Improved the `'stabilized'` event, it's now firing after every stabilization
+  with iteration count as parameter.
+- Fixed page scroll event not being blocked when moving around in Network
+  using arrow keys.
+- Fixed an initial rendering before the graph has been stabilized.
+- Fixed bug where loading hierarchical data after initialization crashed network.
+- Added different layout method to the hierarchical system based on the direction of the edges.
+
+### Graph2D
+
+- Implemented option `handleOverlap` to support overlap, sideBySide and stack.
+- Implemented two examples showing the `handleOverlap` functionality.
+- Implemented `customRange` for the Y axis and an example showing how it works.
+- Implemented localization support.
+- Implemented option `clickToUse`.
+- Implemented functions `setCurrentTime(date)` and `getCurrentTime()`.
+- Implemented function `moveTo(time, options)`.
+- Fixed bugs.
+- Added groups.visibility functionality and an example showing how it works.
+
+
 ## 2014-08-14, version 3.2.0
 
 ### General

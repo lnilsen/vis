@@ -2,6 +2,57 @@
 http://visjs.org
 
 
+## 2014-10-11, version 3.4.1
+
+### Network
+
+- Fix for introduced bug on zoomExtent navigation button.
+- Added animation to zoomExtent navigation button.
+- Improved cleaning of Hammer.js bindings.
+
+### Timeline
+
+- Fixed a bug in IE freezing when margin.item and margin.axis where both 0.
+
+
+## 2014-09-10, version 3.4.0
+
+### Graph2d
+
+- Fixed moment.js url in localization example.
+
+### Network
+
+- Fixed some positioning issues with the close button of the manipulation menu.
+- Added fontFill to Nodes as it is in Edges.
+- Implemented support for broken image fallback. Thanks @sfairgrieve.
+- Added multiline labels to edges as they are implemented in nodes. Updated 
+  multiline example to show this.
+- Added animation and camera controls by the method .moveTo()
+- Added new event that fires when the animation is finished.
+- Added new example showing the new features of animation.
+- Added getScale() method.
+
+### Timeline
+
+- Implemented support for templates.
+- Implemented a new item type: `'background'`. This can be used to mark periods
+  with a background color and label.
+- Implemented support for attaching HTML attributes to items. Thanks @dturkenk.
+- Fixed moment.js url in localization example.
+- Fixed `className` of groups not being updated when changed.
+- Fixed the `id` field of a new item not correctly generated.
+- Fixed newly added item ignored when returning an other object instance.
+- Fixed option `autoResize` not working on IE in case of changing visibility
+  of the Timeline container element.
+- Fixed an overflow issue with the dots of BoxItems when using groups.
+- Fixed a horizontal 1-pixel offset in the items (border width wasn't taken into 
+  account).
+- Renamed internal items from `ItemBox`, `ItemRange`, and `ItemPoint` to
+  respectively `BoxItem`, `RangeItem`, and `PointItem`.
+- Fixed an error thrown when calling `destroy()`.
+
+
 ## 2014-08-29, version 3.3.0
 
 ### Timeline
@@ -31,7 +82,7 @@ http://visjs.org
 - Fixed physics solving stopping when a support node was not moving.
 - Implemented localization support.
 - Implemented option `clickToUse`.
-- Improved the `'stabilized'` event, it's now firing after every stabilization
+- Improved the `stabilized` event, it's now firing after every stabilization
   with iteration count as parameter.
 - Fixed page scroll event not being blocked when moving around in Network
   using arrow keys.
@@ -39,7 +90,7 @@ http://visjs.org
 - Fixed bug where loading hierarchical data after initialization crashed network.
 - Added different layout method to the hierarchical system based on the direction of the edges.
 
-### Graph2D
+### Graph2d
 
 - Implemented option `handleOverlap` to support overlap, sideBySide and stack.
 - Implemented two examples showing the `handleOverlap` functionality.
@@ -58,7 +109,7 @@ http://visjs.org
 
 - Refactored Timeline and Graph2d to use the same core.
 
-### Graph2D
+### Graph2d
 
 - Added `visible` property to the groups.
 - Added `getLegend()` method.

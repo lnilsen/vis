@@ -21,6 +21,7 @@ exports.graph3d = {
 exports.Timeline = require('./lib/timeline/Timeline');
 exports.Graph2d = require('./lib/timeline/Graph2d');
 exports.timeline = {
+  DateUtil: require('./lib/timeline/DateUtil'),
   DataStep: require('./lib/timeline/DataStep'),
   Range: require('./lib/timeline/Range'),
   stack: require('./lib/timeline/Stack'),
@@ -41,6 +42,7 @@ exports.timeline = {
     DataAxis: require('./lib/timeline/component/DataAxis'),
     GraphGroup: require('./lib/timeline/component/GraphGroup'),
     Group: require('./lib/timeline/component/Group'),
+    BackgroundGroup: require('./lib/timeline/component/BackgroundGroup'),
     ItemSet: require('./lib/timeline/component/ItemSet'),
     Legend: require('./lib/timeline/component/Legend'),
     LineGraph: require('./lib/timeline/component/LineGraph'),

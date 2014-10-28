@@ -9,6 +9,7 @@ This document describes how to publish vis.js.
 - Open `HISTORY.md`, write down the changes, version number, and release date.
 - Build the library by running:
 
+        npm prune
         npm update
         npm run build
 
@@ -61,8 +62,8 @@ This generates the vis.js library in the folder `./dist`.
 ## Update website
 
 - Copy the `dist` folder from the `master` branch to the `github-pages` branch.
-- Copy the `examples` folder from the `master` branch to the `github-pages` branch.
 - Copy the `docs` folder from the `master` branch to the `github-pages` branch.
+- Copy the `examples` folder from the `master` branch to the `github-pages` branch.
 - Create a packaged version of vis.js. Go to the `master` branch and run:
 
         zip vis.zip dist docs examples README.md HISTORY.md LICENSE NOTICE -r

@@ -2,7 +2,84 @@
 http://visjs.org
 
 
-## 2014-10-11, version 3.4.1
+## 2014-10-24, version 3.6.2
+
+- Vis.js is now dual licensed under both Apache 2.0 and MIT.
+
+
+## 2014-10-22, version 3.6.1
+
+### Timeline
+
+- Fixed uneven stepsized with hidden dates.
+- Fixed multiple bugs with regards to hidden dates.
+- Fixed subgroups and added subgroup sorting. Subgroup labels will be in future releases.
+
+
+## 2014-10-21, version 3.6.0
+
+### Network
+
+- Title of nodes and edges can now be an HTML element too.
+- Renamed storePosition to storePositions. Added deprication message and old name still works.
+- Worked around hammer.js bug with multiple release listeners.
+- Improved cleaning up after manipulation toolbar.
+- Added getPositions() method to get the position of all nodes or some of them if specific Ids are supplied.
+- Added getCenterCoordinates() method to get the x and y position in canvas space of the center of the view.
+- Fixed node label becoming undefined.
+- Fixed cluster fontsize scaling.
+- Fixed cluster sector scaling.
+- Added oldHeight and oldWidth to resize event.
+
+### Timeline
+
+- Implemented field `style` for both items and groups, to set a custom style for
+  individual items.
+- Fixed height of BackgroundItems not being 100% when timeline has a fixed height.
+- Fixed width of BackgroundItems not being reduced to 0 when zooming out.
+- Fixed onclick events in items not working.
+- Added hiddenDates to hide specific times and/or days in the timeline.
+
+### DataSet
+
+- Event listeners of `update` now receive an extra property `data`, 
+  containing the changed fields of the changed items.
+
+### Graph2d
+
+- Fixed height of legend when there are many items showing.
+
+### Graph3d
+
+- Implemented options `xValueLabel`, `yValueLabel` and `zValueLabel` for custom labels along
+  the x, y, z axis. Thanks @fabriziofortino.
+
+
+## 2014-09-16, version 3.5.0
+
+### Network
+
+- Fixed nodes not always being unfixed when using allowedToMove.
+- Added dragStart and dragEnd events.
+- Added edge selection on edge labels.
+
+### Graph2d
+
+- Fixed dataAxis not showing large numbers correctly.
+
+
+## 2014-09-12, version 3.4.2
+
+### Network
+
+- Changed timings for zoomExtent animation.
+- Fixed possible cause of freezing graph when animating.
+- Added locked to focusOnNode and releaseNode().
+- Fixed minor bug in positioning of fontFill of nodes with certain shapes.
+- Added startStabilization event.
+
+
+## 2014-09-11, version 3.4.1
 
 ### Network
 
